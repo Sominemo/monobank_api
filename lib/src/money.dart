@@ -134,4 +134,9 @@ class Money {
     if (other <= 0) throw Exception('Invalid parameter');
     return Money((amount / other).floor(), currency);
   }
+
+  Money operator %(int other) {
+    if (other <= 0) throw Exception('Invalid parameter');
+    return Money(amount % other, currency);
+  }
 }
