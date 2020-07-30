@@ -5,3 +5,4 @@
 library monobank_api;
 
 export 'src/api.dart';
+export 'src/money.dart';
