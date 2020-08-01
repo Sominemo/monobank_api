@@ -307,7 +307,8 @@ class API {
   /// Returns `true` if there are requests being throttled
   bool get isCartBusy => _cartBusy;
 
-  bool _isMethodBusy(String methodId) => _methodBusy[methodId] ?? false;
+  /// Returns is method \[of class\] is currently in-work
+  bool isMethodBusy(String methodId) => _methodBusy[methodId] ?? false;
 
   /// Returns configured delay between requests of the same class
   ///
@@ -341,8 +342,10 @@ class API {
 
     // Return delay caused by global timer
     // if not enough time has passed yet
-    if (timePassed < globalTimeout) {
-      return globalTimeout - timePassed;
+    if (methodId == null) {
+      if (timePassed < globalTimeout) {
+        return globalTimeout - timePassed;
+      }
     }
 
     // If request class is specified
@@ -354,11 +357,12 @@ class API {
       // Minimum delay if the request is being sent right now
       // This works so because the runnig request can finish with
       // an error, so the next request will be able to be sent immediatelly
-      if (_isMethodBusy(methodId)) return Duration(milliseconds: 1);
+      if (isMethodBusy(methodId)) {
+        return Duration(milliseconds: 1);
+      }
 
       // Get configured timeout
       final requestTimeout = getMethodRequestTimeout(methodId);
-
       // If not enough time passed for the class - return difference
       if (requestTimeout > methodTimePassed) {
         return requestTimeout - methodTimePassed;
@@ -370,14 +374,14 @@ class API {
   }
 
   /// Returns `true` if request \[of class\] can be sent immediatelly
-  /// 
+  ///
   /// Can be also calculated by comparasion of API.isRequestImmediate
   /// to [Duration.zero]
   bool isRequestImmediate(String methodId) =>
       willFreeIn(methodId: methodId) == Duration.zero;
 
   /// Evaluate the request
-  /// 
+  ///
   /// See [APIRequest] and [APIRequest.result]
   Future<APIResponse> call(APIRequest request) {
     if (!request._isProcessingNeeded) return request.result;
@@ -392,12 +396,14 @@ class API {
   }
 
   void _sendToCart(APIRequest request) {
-    if (request.settings & APIFlags.skipGlobal > 0) {
+    if ((request.settings & APIFlags.skipGlobal > 0 &&
+            request.settings & APIFlags.skip > 0) &&
+        request.settings & APIFlags.waiting == 0) {
       _sendRequest(request);
       return;
     }
 
-    if (request.settings & (APIFlags.waiting | APIFlags.skip) > 0) {
+    if (request.settings & APIFlags.waiting > 0) {
       _cart.add(request);
       _cartRunner();
       return;
@@ -420,16 +426,18 @@ class API {
 
     _cartBusy = true;
 
+    Duration globalWait;
+
     Duration minDelay;
 
     for (var request in _cart.toList()) {
-      final beforeSentMethodTime = lastRequest(methodId: request.methodId);
-      final beforeSentTime = lastRequest();
       try {
+        globalWait = willFreeIn();
         if (request.methodId != null) {
           final methodWait = willFreeIn(methodId: request.methodId);
           if (methodWait != Duration.zero &&
-              (request.settings & APIFlags.skip == 0)) {
+              ((request.settings & APIFlags.skip == 0) ||
+                  (request.settings & APIFlags.skipGlobal != 0))) {
             minDelay = (minDelay == null
                 ? methodWait
                 : math.min(minDelay, methodWait));
@@ -437,17 +445,12 @@ class API {
           }
         }
 
-        _lastRequest = DateTime.now();
-        _lastRequests[request.methodId] = DateTime.now();
-        _methodBusy[request.methodId] = true;
+        if (globalWait != Duration.zero &&
+            (request.settings & APIFlags.skipGlobal == 0)) continue;
+
         _sendRequest(request);
-        request._isProcessingNeeded = false;
         _cart.remove(request);
       } catch (e) {
-        _lastRequest = beforeSentTime;
-        _lastRequests[request.methodId] = beforeSentMethodTime;
-        _methodBusy[request.methodId] = false;
-
         if (e is APIError && !e.isIllegalRequestError) {
           _cartBusy = false;
           rethrow;
@@ -455,8 +458,18 @@ class API {
       }
     }
 
-    if (_cart.isNotEmpty && minDelay is Duration) {
-      Timer(minDelay, () => _cartRunner(recursive: true));
+    if (_cart.isNotEmpty) {
+      globalWait = willFreeIn();
+
+      if (globalWait != Duration.zero &&
+          (minDelay == null || globalWait < minDelay)) {
+        minDelay = globalWait;
+      }
+
+      if (minDelay is Duration) {
+        Timer(minDelay, () => _cartRunner(recursive: true));
+        return;
+      }
     }
 
     _cartBusy = false;
@@ -464,8 +477,18 @@ class API {
 
   void _sendRequest(APIRequest request) async {
     final url = request.useAuth ? domain : noAuthDomain;
-
+    final beforeSentMethodTime = lastRequest(methodId: request.methodId);
+    final beforeSentTime = lastRequest();
     try {
+      request._isProcessingNeeded = false;
+      var inLine = (request.settings & APIFlags.skip == 0) &&
+          (request.settings & APIFlags.skipGlobal == 0);
+      _lastRequest = DateTime.now();
+      _lastRequests[request.methodId] = DateTime.now();
+      if (inLine) {
+        _methodBusy[request.methodId] = true;
+      }
+
       final requestUrl = '$url${request.method}';
       preprocessRequest(request);
       if (request.useAuth) authAttacher(request);
@@ -474,7 +497,7 @@ class API {
 
       if (request.httpMethod == APIHttpMethod.POST) {
         response = await http.post(requestUrl,
-            body: request.data, headers: request.headers);
+            body: jsonEncode(request.data), headers: request.headers);
       } else if (request.httpMethod == APIHttpMethod.GET) {
         response = await http.get(requestUrl, headers: request.headers);
       } else {
@@ -487,8 +510,19 @@ class API {
 
       final resolver = APIResponse._(
           json.decode(response.body), response.statusCode, response.headers);
+
+      final stamp = DateTime.now();
+      _lastRequest = stamp;
+      _lastRequests[request.methodId] = stamp;
+
+      if (inLine) {
+        _methodBusy[request.methodId] = false;
+      }
       request._completer.complete(resolver);
     } on APIError catch (e) {
+      _lastRequest = beforeSentTime;
+      _lastRequests[request.methodId] = beforeSentMethodTime;
+
       if ((e.isFloodError && request.settings & APIFlags.resendOnFlood > 0) ||
           request.settings & APIFlags.resend > 0) {
         _sendToCart(request);
@@ -496,6 +530,9 @@ class API {
         request._completer.completeError(e);
       }
     } catch (e) {
+      _lastRequest = beforeSentTime;
+      _lastRequests[request.methodId] = beforeSentMethodTime;
+
       request._completer.completeError(e);
       rethrow;
     }
@@ -509,7 +546,7 @@ class API {
   }
 
   /// Preprocesses given request
-  /// 
+  ///
   /// Adds `Content-Type` and `Accept` headers
   void preprocessRequest(APIRequest request) {
     request.headers.putIfAbsent('Content-Type', () => 'application/json');
