@@ -16,7 +16,7 @@ void main() {
         globalTimeout: Duration(seconds: 2), requestTimeouts: timeouts);
   });
 
-  group('[API Static]', () {
+  group('Static', () {
     test('Initial wait value is correct', () {
       expect(api.willFreeIn(), equals(Duration.zero));
     });
@@ -81,7 +81,7 @@ void main() {
     });
   });
 
-  group('[API]', () {
+  group('With Server', () {
     HttpServer server;
     Uri url;
     API api;
@@ -178,7 +178,7 @@ void main() {
       }));
     });
 
-    group('[Clonnig and Delivery]', () {
+    group('Clonnig and Delivery', () {
       API api;
       APIRequest originalAPIRequest, cloneAPIRequest;
       HttpRequest originalRequest, cloneRequest;
@@ -236,8 +236,8 @@ void main() {
       });
     });
 
-    group('[Cart]', () {
-      group('[Flags]', () {
+    group('Cart', () {
+      group('Flags', () {
         const timeouts = {
           'test-class1': Duration(seconds: 3),
           'test-class2': Duration(seconds: 1),
