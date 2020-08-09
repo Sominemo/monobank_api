@@ -178,7 +178,7 @@ void main() {
       }));
     });
 
-    group('[Clonnig]', () {
+    group('[Clonnig and Delivery]', () {
       API api;
       APIRequest originalAPIRequest, cloneAPIRequest;
       HttpRequest originalRequest, cloneRequest;
@@ -191,7 +191,7 @@ void main() {
             data: {'test-field': 'test-value'},
             headers: {'X-Test-Header': 'test-value'},
             httpMethod: APIHttpMethod.POST,
-            settings: APIFlags.skipGlobal,
+            settings: APIFlags.skipGlobal | APIFlags.waiting,
             useAuth: true);
 
         cloneAPIRequest = APIRequest.clone(originalAPIRequest);
@@ -309,18 +309,19 @@ void main() {
           server.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
-          }, count: 1));
-          api.call(request);
-          api.call(APIRequest.clone(request)).catchError(expectAsync1((error) {
+            // Request must not be delivered
+          }, count: 0));
+          api.call(request).catchError(expectAsync1((error) {
             expect(error.isIllegalRequestError, equals(true));
           }));
         });
 
-        test('skip: Works on no-throttling', () {
+        test('skip | waiting: Works on no-throttling', () {
           api = API(url);
           var wait = Duration.zero.inMilliseconds;
           var request = APIRequest('test-method',
-              settings: APIFlags.skip, methodId: 'test-class1');
+              settings: APIFlags.skip | APIFlags.waiting,
+              methodId: 'test-class1');
 
           DateTime lastTime;
 
@@ -343,11 +344,12 @@ void main() {
           api.call(APIRequest.clone(request));
         }, timeout: Timeout(Duration(seconds: 1)));
 
-        test('skipGlobal: Works on no-throttling', () {
+        test('skipGlobal | waiting: Works on no-throttling', () {
           api = API(url);
           var wait = Duration.zero.inMilliseconds;
           var request = APIRequest('test-method',
-              settings: APIFlags.skipGlobal, methodId: 'test-class2');
+              settings: APIFlags.skipGlobal | APIFlags.waiting,
+              methodId: 'test-class2');
 
           DateTime lastTime;
 
@@ -378,7 +380,7 @@ void main() {
             request.response.write('{}');
             await request.response.close();
             fail('Request must not be delivered');
-          }));
+          }, count: 0));
 
           api.call(request).catchError(expectAsync1((error) {
             expect(error.isIllegalRequestError, equals(true));
@@ -401,10 +403,10 @@ void main() {
           api.call(request);
         });
 
-        test('resendOnFlood', () async {
+        test('resendOnFlood | waiting', () async {
           var count = 0;
-          var request1 =
-              APIRequest('test-method', settings: APIFlags.resendOnFlood);
+          var request1 = APIRequest('test-method',
+              settings: APIFlags.resendOnFlood | APIFlags.waiting);
           var request2 = APIRequest('test-method2');
 
           server.listen(expectAsync1((request) async {
@@ -549,11 +551,95 @@ void main() {
             request.response.write('{}');
             await request.response.close();
             fail('Request must not be delivered');
-          }));
+          }, count: 0));
 
           api.call(request).catchError(expectAsync1((error) {
             expect(error.isIllegalRequestError, equals(true));
           }));
+        });
+
+        test('resendOnFlood | waiting: Correct wait times for global',
+            () async {
+          DateTime last;
+          var request1 = APIRequest('test-method',
+              settings: APIFlags.resendOnFlood | APIFlags.waiting);
+
+          server.listen(expectAsync1((request) async {
+            if (last == null) {
+              last = DateTime.now();
+              request.response.statusCode = HttpStatus.tooManyRequests;
+            } else {
+              expect(DateTime.now().difference(last).inMilliseconds,
+                  closeTo(0, threshold));
+            }
+            request.response.write('{}');
+            await request.response.close();
+          }, count: 2));
+
+          await api.call(request1);
+        });
+
+        test('resendOnFlood | waiting: Correct wait times for method',
+            () async {
+          DateTime last;
+          var request1 = APIRequest('test-method',
+              settings: APIFlags.resendOnFlood | APIFlags.waiting,
+              methodId: 'test-class1');
+
+          server.listen(expectAsync1((request) async {
+            if (last == null) {
+              last = DateTime.now();
+              request.response.statusCode = HttpStatus.tooManyRequests;
+            } else {
+              expect(DateTime.now().difference(last).inMilliseconds,
+                  closeTo(0, threshold));
+            }
+            request.response.write('{}');
+            await request.response.close();
+          }, count: 2));
+
+          await api.call(request1);
+        });
+
+        test('resend | waiting: Correct wait times for global', () async {
+          DateTime last;
+          var request1 = APIRequest('test-method',
+              settings: APIFlags.resend | APIFlags.waiting);
+
+          server.listen(expectAsync1((request) async {
+            if (last == null) {
+              last = DateTime.now();
+              request.response.statusCode = HttpStatus.notFound;
+            } else {
+              expect(DateTime.now().difference(last).inMilliseconds,
+                  closeTo(0, threshold));
+            }
+            request.response.write('{}');
+            await request.response.close();
+          }, count: 2));
+
+          await api.call(request1);
+        });
+
+        test('resend | waiting: Correct wait times for method', () async {
+          DateTime last;
+          var request1 = APIRequest('test-method',
+              settings: APIFlags.resend | APIFlags.waiting,
+              methodId: 'test-class1');
+
+          server.listen(expectAsync1((request) async {
+            if (last == null) {
+              last = DateTime.now();
+              request.response.statusCode = HttpStatus.tooManyRequests;
+            } else {
+              expect(DateTime.now().difference(last).inMilliseconds,
+                  closeTo(0, threshold));
+            }
+            request.response.write('{}');
+            await request.response.close();
+          }, count: 2));
+
+          await api.call(request1);
         });
       });
     });

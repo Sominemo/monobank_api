@@ -396,9 +396,19 @@ class API {
   }
 
   void _sendToCart(APIRequest request) {
-    if ((request.settings & APIFlags.skipGlobal > 0 &&
-            request.settings & APIFlags.skip > 0) &&
+    if (((request.settings & APIFlags.skip > 0) ||
+            (request.settings & APIFlags.skipGlobal > 0)) &&
         request.settings & APIFlags.waiting == 0) {
+      request._completer.completeError(APIError(2));
+      return;
+    }
+
+    if (request.settings & APIFlags.skipGlobal > 0 &&
+        request.settings & APIFlags.skip > 0) {
+      if (request.settings & APIFlags.waiting > 0) {
+        request._completer.completeError(APIError(2));
+        return;
+      }
       _sendRequest(request);
       return;
     }
@@ -410,7 +420,8 @@ class API {
     }
 
     if (!isRequestImmediate(request.methodId)) {
-      throw APIError(2);
+      request._completer.completeError(APIError(2));
+      return;
     }
 
     _cart.add(request);
