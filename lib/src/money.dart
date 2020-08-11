@@ -188,14 +188,14 @@ class Money {
           : currency.code);
 
   /// Returns `true` if the amount is `0`
-  bool isZero() => amount == 0;
+  bool get isZero => amount == 0;
 
   /// Returns `true` if the amount is < `0`
-  bool isNegative() => amount < 0;
+  bool get isNegative => amount < 0;
 
   /// Returns new Money instance of the same currency with
   /// absolute value of amount
-  Money abs() => Money(amount.abs(), currency);
+  factory Money.abs(target) => Money(target.amount.abs(), target.currency);
 
   /// Converts double to integer which represents amount of the instance
   /// in the smallest unit of the currency
@@ -294,7 +294,7 @@ class Money {
   }
 
   /// Divides amount of the [Money] on integer operand and creates new instance
-  /// 
+  ///
   /// The result amount is beeing floored
   ///
   /// Throws exception if `int == 0`
@@ -316,4 +316,99 @@ class Money {
   Money operator *(int other) {
     return Money(amount * other, currency);
   }
+}
+
+/// Available rounding algos
+///
+/// Used for exchange in [CurrencyInfo]
+enum MoneyRounding {
+  /// Floor numbers
+  ///
+  /// Whole part that's less than the smallest unit of the currency will be ignored
+  /// without impact on the final number
+  floor,
+
+  /// Mathematical rounding
+  ///
+  /// Uses usual rounding to smallest unit of the currency
+  math,
+
+  /// Half to even rounding
+  ///
+  /// Also known as banker's rounding. Rounds depending on oddness of the number.
+  bank
+}
+
+/// Currency converter
+///
+/// Helps converting different currencies with specified rate
+class CurrencyInfo {
+  /// Currency converter object
+  ///
+  /// Accepts two currencies, sell and buy rate of currency A relative to currency B
+  ///
+  /// Optionally you can specify rounding for convertations
+  CurrencyInfo(this.currencyA, this.currencyB, this.rateSell, this.rateBuy,
+      {this.rounding = MoneyRounding.bank});
+
+  /// Currency to be sold or bought
+  final Currency currencyA;
+
+  /// Currency towards which conversion rates are specified
+  final Currency currencyB;
+
+  /// Rate which is being used when Currency A is being sold
+  final double rateSell;
+
+  /// Rate which is being used when Currency A is being bought
+  final double rateBuy;
+
+  /// Used rounding mode for operations.
+  ///
+  /// See [MoneyRounding]
+  final MoneyRounding rounding;
+
+  /// Checks if sell rate is the same with buy rate
+  ///
+  /// Shortcut for [rateSell] == [rateBuy]
+  bool get cross => rateSell == rateBuy;
+
+  int _round(double n) {
+    if (rounding == MoneyRounding.bank) {
+      var l = (n * 10).abs().floor();
+      if (l % 2 != 0) l += 1;
+      if (n < 0) l = -l;
+      return (l / 10).floor();
+    }
+    if (rounding == MoneyRounding.floor) {
+      return n.floor();
+    }
+    if (rounding == MoneyRounding.math) {
+      return n.round();
+    }
+    throw Exception('Unsupported rounding');
+  }
+
+  /// Buys or sells [currencyA]
+  ///
+  /// - If money of [currencyA] is being passed, it's being sold and [currencyB] is being returned
+  /// - If money of [currencyB] is being passed, [currencyA] is being bought returned
+  ///
+  /// If none of above, Exception is thrown
+  Money exchange(Money amount) {
+    if (amount.currency == currencyA) {
+      return Money(_round(amount.amount * rateSell), currencyB);
+    }
+
+    if (amount.currency == currencyB) {
+      return Money(_round(amount.amount / rateBuy), currencyA);
+    }
+
+    throw Exception('This currency is not supported by this constructor');
+  }
+
+  /// Shortcut to create conversion objects with same sell rate and currency rate
+  factory CurrencyInfo.cross(currencyA, currencyB, rateSell, {rounding}) =>
+      CurrencyInfo(currencyA, currencyB, rateSell, rateSell,
+          rounding: rounding);
 }
