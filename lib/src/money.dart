@@ -371,12 +371,12 @@ class CurrencyInfo {
   /// Checks if sell rate is the same with buy rate
   ///
   /// Shortcut for [rateSell] == [rateBuy]
-  bool get cross => rateSell == rateBuy;
+  bool get isCross => rateSell == rateBuy;
 
   int _round(double n) {
     if (rounding == MoneyRounding.bank) {
       var l = (n * 10).abs().floor();
-      if (l % 2 != 0) l += 1;
+      if (l % 2 != 0) l += 10;
       if (n < 0) l = -l;
       return (l / 10).floor();
     }
@@ -408,7 +408,9 @@ class CurrencyInfo {
   }
 
   /// Shortcut to create conversion objects with same sell rate and currency rate
-  factory CurrencyInfo.cross(currencyA, currencyB, rateSell, {rounding}) =>
+  factory CurrencyInfo.cross(
+          Currency currencyA, Currency currencyB, double rateSell,
+          {MoneyRounding rounding}) =>
       CurrencyInfo(currencyA, currencyB, rateSell, rateSell,
           rounding: rounding);
 }
