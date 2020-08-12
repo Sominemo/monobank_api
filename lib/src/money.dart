@@ -1,15 +1,15 @@
 import 'dart:math';
 
-import '../data/iso4217.dart';
+import '../data/currency/iso4217.dart';
 
 const Map<String, dynamic> _CurrencyStyling = {
-  'UAH': '\u8372',
+  'UAH': '\u20B4',
   'RUB': '\u20bd',
   'USD': '\u0024',
   'EUR': '\u20AC',
-  'PLN': '\u0122\u0322',
-  'BGN': '\u1083\u1074',
-  'GBP': '\u0163',
+  'PLN': 'z\u0142',
+  'BGN': '\u043B\u0432',
+  'GBP': '\u00A3',
   'JPY': '\u00a5',
 };
 
@@ -24,7 +24,7 @@ class Currency {
   ///
   /// Currency instance is immunable
   const Currency(
-      this.code, this.number, this.digits, this.name, this.countries);
+      this.code, this.number, this.digits);
 
   /// ISO-4217 Currency code in `XXX` format
   final String code;
@@ -41,20 +41,6 @@ class Currency {
   /// - for `111.2` it will be `1`
   final int digits;
 
-  /// Literal name of currency
-  ///
-  /// You can use it as reference information, but don't rely on it too much
-  final String name;
-
-  /// List of countries currency is being used in
-  ///
-  /// You can use it as reference information, but don't rely on it too much
-  ///
-  /// Some countries have their prefixes in brackets after them, for example,
-  /// `United Kingdom (the)`. You might want to change that before
-  /// displaying to the end user
-  final List<String> countries;
-
   /// Find currency by XXX ISO-4217 code
   ///
   /// Case insensitive
@@ -67,8 +53,7 @@ class Currency {
 
     if (info == null) return UnknownCurrency(code);
 
-    return Currency(info['code'], info['number'], info['digits'], info['name'],
-        info['countries']);
+    return Currency(info['code'], info['number'], info['digits']);
   }
 
   /// Find currency by ISO-4217 currency number
@@ -80,15 +65,14 @@ class Currency {
 
     if (info == null) return UnknownCurrency(number.toString());
 
-    return Currency(info['code'], info['number'], info['digits'], info['name'],
-        info['countries']);
+    return Currency(info['code'], info['number'], info['digits']);
   }
 
   /// Dummy currency
   ///
   /// Used for operations with [Money] without currency which require
   /// currency equantity
-  static const Currency dummy = Currency('XXX', 999, 2, 'No currency', []);
+  static const Currency dummy = Currency('XXX', 999, 2);
 
   @override
   int get hashCode {
@@ -128,7 +112,7 @@ class UnknownCurrency extends Currency {
   /// Creates new Unknown Currency instance
   ///
   /// See [UnknownCurrency] for details
-  UnknownCurrency(String code) : super(code, 0, 2, '#$code', []);
+  UnknownCurrency(String code) : super(code, 0, 2);
 
   /// hashCode of an unknown currency is always `0`
   @override
@@ -315,6 +299,30 @@ class Money {
   /// Multiplies amount of the [Money] on integer operand and creates new instance
   Money operator *(int other) {
     return Money(amount * other, currency);
+  }
+
+  /// Selects minimal value among passed
+  ///
+  /// Throws if 0 items or on different currencies
+  static Money min(List<Money> items) {
+    if (items.isEmpty) throw Exception('Minimal 1 item expected');
+    var m = items[0];
+    items.forEach((e) {
+      if (e < m) m = e;
+    });
+    return m;
+  }
+
+  /// Selects maximal value among passed
+  ///
+  /// Throws if 0 items or on different currencies
+  static Money max(List<Money> items) {
+    if (items.isEmpty) throw Exception('Minimal 1 item expected');
+    var m = items[0];
+    items.forEach((e) {
+      if (e > m) m = e;
+    });
+    return m;
   }
 }
 

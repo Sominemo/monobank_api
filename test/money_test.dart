@@ -1,10 +1,10 @@
-import 'package:monobank_api/main.dart';
+import 'package:monobank_api/monobank_api.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('Currency', () {
     test('Construct', () {
-      var c = Currency('XXX', 999, 2, 'fake currency', ['Country']);
+      var c = Currency('XXX', 999, 2);
       expect(c.code, 'XXX');
     });
     test('Find currency by code', () {
@@ -57,31 +57,31 @@ void main() {
       expect(m.amount, -5);
     });
     test('Double with 0 digits', () {
-      var m = Money(2759, Currency('XXX', 999, 0, 'Dummy', []));
+      var m = Money(2759, Currency('XXX', 999, 0));
       expect(m.toDouble(), 2759.0);
     });
     test('Double with 1 digit', () {
-      var m = Money(2759, Currency('XXX', 999, 1, 'Dummy', []));
+      var m = Money(2759, Currency('XXX', 999, 1));
       expect(m.toDouble(), 275.9);
     });
     test('Double with 2 digits', () {
-      var m = Money(2759, Currency('XXX', 999, 2, 'Dummy', []));
+      var m = Money(2759, Currency('XXX', 999, 2));
       expect(m.toDouble(), 27.59);
     });
     test('Double with 3 digits', () {
-      var m = Money(2759, Currency('XXX', 999, 3, 'Dummy', []));
+      var m = Money(2759, Currency('XXX', 999, 3));
       expect(m.toDouble(), 2.759);
     });
     test('Double with 4 digits', () {
-      var m = Money(2759, Currency('XXX', 999, 4, 'Dummy', []));
+      var m = Money(2759, Currency('XXX', 999, 4));
       expect(m.toDouble(), 0.2759);
     });
     test('Double with 5 digits', () {
-      var m = Money(2759, Currency('XXX', 999, 5, 'Dummy', []));
+      var m = Money(2759, Currency('XXX', 999, 5));
       expect(m.toDouble(), 0.02759);
     });
     test('Double with 4 digits to string', () {
-      var m = Money(2759, Currency('XXX', 999, 4, 'Dummy', []));
+      var m = Money(2759, Currency('XXX', 999, 4));
       expect(m.toNumericString(), '0.2759');
     });
     test('ToString without fancy currencies', () {
@@ -222,77 +222,95 @@ void main() {
   });
   group('CurrencyInfo', () {
     test('Construct', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5, 1.6, rounding: MoneyRounding.math);
       expect(i.rateBuy, 1.6);
     });
     test('isCross', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5, 1.5, rounding: MoneyRounding.math);
       expect(i.isCross, true);
     });
     test('!isCross', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5, 1.6, rounding: MoneyRounding.math);
       expect(i.isCross, false);
     });
     test('!Currency.cross', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo.cross(c1, c2, 1.5, rounding: MoneyRounding.math);
       expect(i.rateSell, i.rateBuy);
     });
     test('Exchange 1.5 sell math', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5, 1.6, rounding: MoneyRounding.math);
       var r = i.exchange(Money(2, c1));
       expect(r, Money(3, c2));
     });
     test('Exchange 1.5 buy math', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.6, 1.5, rounding: MoneyRounding.math);
       var r = i.exchange(Money(3, c2));
       expect(r, Money(2, c1));
     });
     test('Exchange 234 -> 1.5694 math', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5694, 2, rounding: MoneyRounding.math);
       var r = i.exchange(Money(234, c1));
       expect(r, Money(367, c2));
     });
     test('Exchange 235 -> 1.5694 math', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5694, 2, rounding: MoneyRounding.math);
       var r = i.exchange(Money(235, c1));
       expect(r, Money(369, c2));
     });
     test('Exchange 235 -> 1.5694 floor', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5694, 2, rounding: MoneyRounding.floor);
       var r = i.exchange(Money(235, c1));
       expect(r, Money(368, c2));
     });
     test('Exchange 235 -> 1.5694 bank', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5694, 2, rounding: MoneyRounding.bank);
       var r = i.exchange(Money(235, c1));
       expect(r, Money(368, c2));
     });
     test('Exchange 2365 -> 1.5709 bank', () {
-      var c1 = Currency('XXX', 999, 2, 'Dummy', []);
-      var c2 = Currency('AAA', 000, 2, 'Dummy 2', []);
+      var c1 = Currency('XXX', 999, 2);
+      var c2 = Currency('AAA', 000, 2);
       var i = CurrencyInfo(c1, c2, 1.5709, 2, rounding: MoneyRounding.bank);
       var r = i.exchange(Money(235, c1));
       expect(r, Money(370, c2));
+    });
+    test('min()', () {
+      expect(
+          Money.min([
+            Money(5, Currency.dummy),
+            Money(-4, Currency.dummy),
+            Money(2, Currency.dummy)
+          ]),
+          Money(-4, Currency.dummy));
+    });
+    test('max()', () {
+      expect(
+          Money.max([
+            Money(5, Currency.dummy),
+            Money(-4, Currency.dummy),
+            Money(2, Currency.dummy)
+          ]),
+          Money(5, Currency.dummy));
     });
   });
 }

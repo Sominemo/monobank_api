@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:monobank_api/main.dart';
+import 'package:monobank_api/monobank_api.dart';
 import 'package:test/test.dart';
 
 void main() {

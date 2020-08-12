@@ -26,11 +26,14 @@ class APIError {
   /// See [APIErrorType]
   final APIErrorType type;
 
+  /// Body of the server response
+  final String body;
+
   /// API Error constructor
   ///
   /// Does not provide side effects;
   /// Type defaults to local
-  APIError(this.data, {this.type = APIErrorType.local});
+  APIError(this.data, {this.type = APIErrorType.local, this.body = ''});
 
   /// Checks for flood error thrown by server (429 response code)
   ///
@@ -516,7 +519,8 @@ class API {
       }
 
       if (response.statusCode != 200) {
-        throw APIError(response.statusCode, type: APIErrorType.server);
+        throw APIError(response.statusCode,
+            type: APIErrorType.server, body: response.body.toString());
       }
 
       final resolver = APIResponse._(

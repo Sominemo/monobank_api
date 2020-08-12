@@ -1,21 +1,15 @@
-import 'package:monobank_api/main.dart';
-void main() {
-  var client = API(Uri.parse('https://api.monobank.ua/'),
-      token: 'urRZXWbbxW35gJkMmQ0Nn05poKwaMDB2osbDaooeGgPc',
-      globalTimeout: Duration(seconds: 8),
-      requestTimeouts: {'personal/client-info': Duration(seconds: 5), 'bank/currency': Duration(minutes: 1)});
+import 'package:monobank_api/monobank_api.dart';
+import 'package:monobank_api/mcc/extensions/emoji.dart';
 
-  var request1 = APIRequest('personal/client-info',
-      methodId: 'personal/client-info',
-      useAuth: true,
-      httpMethod: APIHttpMethod.GET);
 
-  var request2 = APIRequest('bank/currency',
-      methodId: 'bank/currency', useAuth: true, httpMethod: APIHttpMethod.GET);
+// Grabbing statement for last 3 months
+void main() async {
+  var client = MonoAPI('urRPXWhbxw35g');
 
-  var clientInfo = client.call(request1);
-  var currency = client.call(request2);
-      
-  clientInfo.then((value) => print('Your ID is: '+ value.body['clientId']));
-  currency.then((value) => print('Monobank-supported currencies amount is: '+ value.body.length.toString()));
+  var res = await client.clientInfo();
+  var s = res.accounts[0]
+      .statement(DateTime.now().subtract(Duration(days: 31 * 3)), DateTime.now());
+  await for (var item in s.list()) {
+    print('${item.mcc.emoji} $item\n');
+  }
 }
