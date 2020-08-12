@@ -1,7 +1,9 @@
 name: monobank_api
-description: Simplifies interaction with public Monobank API and Mono Corp API Proxy
-version: 1.0.0
+description: Simplifies interaction with public Monobank API
+version: 1.0.1
 homepage: https://github.com/Sominemo/monobank_api
+authors:
+  - Sergey Dilong <me@sominemo.com>
 
 environment:
   sdk: '>=2.8.1 <3.0.0'
