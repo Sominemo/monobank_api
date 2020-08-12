@@ -23,8 +23,7 @@ class Currency {
   /// Constructs currency
   ///
   /// Currency instance is immunable
-  const Currency(
-      this.code, this.number, this.digits);
+  const Currency(this.code, this.number, this.digits);
 
   /// ISO-4217 Currency code in `XXX` format
   final String code;
@@ -46,7 +45,10 @@ class Currency {
   /// Case insensitive
   ///
   /// Returns [UnknownCurrency] if fails
-  factory Currency.code(String code) {
+  factory Currency.code(
+    /// XXX code to look for
+    String code,
+  ) {
     var upperCode = code.toUpperCase();
     var info = Iso4217.firstWhere((currency) => currency['code'] == upperCode,
         orElse: () => null);
@@ -59,7 +61,10 @@ class Currency {
   /// Find currency by ISO-4217 currency number
   ///
   /// Returns [UnknownCurrency] if fails
-  factory Currency.number(int number) {
+  factory Currency.number(
+    /// ISO-4217 number to look for
+    int number,
+  ) {
     var info = Iso4217.firstWhere((currency) => currency['number'] == number,
         orElse: () => null);
 
@@ -124,7 +129,7 @@ class UnknownCurrency extends Currency {
 /// Supports `+`, `-`, `/`, `*`, `%` and all comparation operators, but works only
 /// with instances of the same currency. See [CurrencyInfo] to exchange
 /// currencies by rate
-class Money {
+class Money implements Comparable {
   /// Constructs new money instance
   ///
   /// The money constructor is constant
@@ -206,6 +211,16 @@ class Money {
 
   void _throwCurrencyError() {
     throw Exception('Operations with different currencies are not supported');
+  }
+
+  @override
+  int compareTo(other) {
+    if (other is! Money) throw Exception('Money can be compared only to Money');
+    Money second = other;
+
+    if (this > second) return 1;
+    if (this < second) return -1;
+    return 0;
   }
 
   /// The equantity operator
@@ -304,7 +319,12 @@ class Money {
   /// Selects minimal value among passed
   ///
   /// Throws if 0 items or on different currencies
-  static Money min(List<Money> items) {
+  static Money min(
+    /// Items to check
+    ///
+    /// Must not be empty
+    List<Money> items,
+  ) {
     if (items.isEmpty) throw Exception('Minimal 1 item expected');
     var m = items[0];
     items.forEach((e) {
@@ -316,7 +336,12 @@ class Money {
   /// Selects maximal value among passed
   ///
   /// Throws if 0 items or on different currencies
-  static Money max(List<Money> items) {
+  static Money max(
+    /// Items to check
+    ///
+    /// Must not be empty
+    List<Money> items,
+  ) {
     if (items.isEmpty) throw Exception('Minimal 1 item expected');
     var m = items[0];
     items.forEach((e) {
@@ -403,7 +428,10 @@ class CurrencyInfo {
   /// - If money of [currencyB] is being passed, [currencyA] is being bought returned
   ///
   /// If none of above, Exception is thrown
-  Money exchange(Money amount) {
+  Money exchange(
+    /// Amount to exchange
+    Money amount,
+  ) {
     if (amount.currency == currencyA) {
       return Money(_round(amount.amount * rateSell), currencyB);
     }
@@ -417,8 +445,8 @@ class CurrencyInfo {
 
   /// Shortcut to create conversion objects with same sell rate and currency rate
   factory CurrencyInfo.cross(
-          Currency currencyA, Currency currencyB, double rateSell,
+          Currency currencyA, Currency currencyB, double rateCross,
           {MoneyRounding rounding}) =>
-      CurrencyInfo(currencyA, currencyB, rateSell, rateSell,
+      CurrencyInfo(currencyA, currencyB, rateCross, rateCross,
           rounding: rounding);
 }

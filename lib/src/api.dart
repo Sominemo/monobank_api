@@ -134,7 +134,15 @@ class APIRequest {
     this.methodId,
     this.settings = APIFlags.waiting,
     this.useAuth = false,
+
+    /// JSON body to send
     Map<String, String> data,
+
+    /// Headers to send
+    ///
+    /// ```
+    /// Key: Value
+    /// ```
     Map<String, String> headers,
     this.httpMethod = APIHttpMethod.GET,
   })  : _completer = Completer(),

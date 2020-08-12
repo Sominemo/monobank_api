@@ -14,5 +14,6 @@ extension CurrencyCountries on Currency {
   /// Some countries have their prefixes in brackets after them, for example,
   /// `United Kingdom (the)`. You might want to change that before
   /// displaying to the end user
-  List<String> get countries => Iso4217Countries[code] ?? [];
+  List<String> get countries =>
+      Iso4217Countries[number.toString()] ?? [];
 }
