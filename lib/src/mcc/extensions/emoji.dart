@@ -1,5 +1,5 @@
 import '../mcc.dart';
-import 'package:monobank_api/data/mcc/emoji.dart';
+import 'package:monobank_api/data/mcc/mcc_emoji_dataset.dart';
 
 /// Emoji dataset for MCC
 ///

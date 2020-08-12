@@ -1,4 +1,4 @@
-import 'package:monobank_api/data/currency/countries.dart';
+import 'package:monobank_api/data/currency/currency_countries_dataset.dart';
 
 import '../../money.dart';
 

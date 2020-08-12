@@ -1,5 +1,5 @@
 import '../mcc.dart';
-import 'package:monobank_api/data/mcc/russian.dart';
+import 'package:monobank_api/data/mcc/mcc_russian_dataset.dart';
 
 /// Russian pack for MCC
 ///

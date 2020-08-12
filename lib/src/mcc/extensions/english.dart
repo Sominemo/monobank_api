@@ -1,5 +1,5 @@
 import '../mcc.dart';
-import 'package:monobank_api/data/mcc/english.dart';
+import 'package:monobank_api/data/mcc/mcc_english_dataset.dart';
 
 /// English pack for MCC
 ///

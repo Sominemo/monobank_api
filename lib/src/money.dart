@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import '../data/currency/iso4217.dart';
+import '../data/currency/iso4217_dataset.dart';
 
 const Map<String, dynamic> _CurrencyStyling = {
   'UAH': '\u20B4',

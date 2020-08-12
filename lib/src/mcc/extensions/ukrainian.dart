@@ -1,5 +1,5 @@
 import '../mcc.dart';
-import 'package:monobank_api/data/mcc/ukrainian.dart';
+import 'package:monobank_api/data/mcc/mcc_ukrainian_dataset.dart';
 
 /// Ukrainian pack for MCC
 ///
