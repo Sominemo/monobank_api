@@ -1,3 +1,6 @@
+## 1.1.2
+- isCreditUsed works properly now
+
 ## 1.1.1
 - Changed card mask type to String so leading zeros won't ruin the actual value
 

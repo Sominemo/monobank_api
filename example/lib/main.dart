@@ -62,7 +62,7 @@ void money() {
       Money(5825, Currency.code('USD')));
 }
 
-void curency() async {
+void currency() async {
   // Creating client
   var client = MonoAnonymousAPI();
 

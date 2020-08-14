@@ -462,9 +462,9 @@ class Account {
   /// and credit limit combined
   bool get isOverdraft => accountBalance.isNegative;
 
-  /// Returns true when funds are being used or the account
+  /// Returns true when credit funds are being used or the account
   /// is in overdraft
-  bool get isCreditUsed => accountBalance >= creditLimit;
+  bool get isCreditUsed => accountBalance < creditLimit;
 
   /// Get statement object for current account
   ///
