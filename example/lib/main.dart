@@ -61,3 +61,20 @@ void money() {
   assert(converter.exchange(Money(5000, Currency.code('EUR'))) ==
       Money(5825, Currency.code('USD')));
 }
+
+void curency() async {
+  // Creating client
+  var client = MonoAnonymousAPI();
+
+  // Getting currencies
+  var cur = await client.currency();
+
+  // Looking for RUB exchanger
+  var currencyInfo = cur.firstWhere((e) => e.currencyA == Currency.code('RUB'));
+
+  // Exchanging 100 UAHs to RUB
+  var result = currencyInfo.exchange(Money(10000, Currency.code('UAH')));
+
+  // Printing
+  print(result);
+}

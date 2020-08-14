@@ -497,7 +497,7 @@ mixin CurrencyMethods on API {
       methodId: 'bank/currency',
       settings: (burst ? APIFlags.waiting | APIFlags.skip : APIFlags.waiting),
     ));
-    List<Map<String, dynamic>> curs = data.body;
+    var curs = List<Map<String, dynamic>>.from(data.body);
     return curs.map<CurrencyInfo>((e) => CurrencyInfo(
         Currency.number(e['currencyCodeA']),
         Currency.number(e['currencyCodeB']),

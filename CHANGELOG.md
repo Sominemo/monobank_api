@@ -1,31 +1,27 @@
-## 1.0.0
-
-- Initial version
-
-## 1.0.1
-
-- Fix metadata
-
-## 1.0.2
-
-- Added examples
-
-## 1.0.3
-
-- Combined examples to a single file
-
-## 1.0.4
-
-- dartfmt fixes
-
-## 1.0.5
-
-- more dartfmt
-
-## 1.0.6
-
-- Renamed files
+## 1.1.0
+- Fixed currency getting
+- Getting currency example
 
 ## 1.0.7
-
 - Formatting
+
+## 1.0.6
+- Renamed files
+
+## 1.0.5
+- more dartfmt
+
+## 1.0.4
+- dartfmt fixes
+
+## 1.0.3
+- Combined examples to a single file
+
+## 1.0.2
+- Added examples
+
+## 1.0.1
+- Fix metadata
+
+## 1.0.0
+- Initial version
