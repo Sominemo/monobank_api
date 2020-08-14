@@ -11,15 +11,18 @@ class Mask {
   Mask._(this.start, this.end);
 
   /// Few first numbers
-  final int start;
+  final String start;
 
   /// Few last numbers
-  final int end;
+  final String end;
 
   factory Mask._fromString(String s) {
-    var e = s.split('*').map((e) => int.parse(e));
+    var e = s.split('*');
     return Mask._(e.first, e.last);
   }
+
+  @override
+  String toString() => '$start****$end';
 }
 
 /// Card class
