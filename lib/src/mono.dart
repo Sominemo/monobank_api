@@ -51,6 +51,11 @@ enum CardType {
   /// as yellow one
   yellow,
 
+  /// FOP
+  ///
+  /// Account of an individual entrepreneur
+  fop,
+
   /// Unknown card
   other
 }
@@ -91,6 +96,10 @@ class BankCard {
 
       case 'yellow':
         return CardType.yellow;
+        break;
+
+      case 'fop':
+        return CardType.fop;
         break;
 
       default:
@@ -414,6 +423,7 @@ class Account {
         creditLimit =
             Money(data['creditLimit'], Currency.number(data['currencyCode'])),
         cashbackType = data['cashbackType'],
+        iban = data['iban'],
         type = BankCard.cardTypeFromString(data['type']),
         cards = List<String>.from(data['maskedPan'])
             .map((e) => BankCard._(
@@ -438,6 +448,9 @@ class Account {
 
   /// Cashback type
   final String cashbackType;
+
+  /// IBAN
+  final String iban;
 
   /// List of related cards
   final List<BankCard> cards;

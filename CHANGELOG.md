@@ -1,3 +1,7 @@
+## 1.2.0
+- Support for iban
+- Support for fop account type
+
 ## 1.1.2
 - isCreditUsed works properly now
 
