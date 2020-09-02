@@ -1,4 +1,4 @@
-## 1.2.1
+## 1.2.2
 - Fixed CurrencyInfo integer parsing error
 
 ## 1.2.0

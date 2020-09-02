@@ -515,12 +515,15 @@ mixin CurrencyMethods on API {
     ));
     var curs = List<Map<String, dynamic>>.from(data.body);
     return curs.map<CurrencyInfo>((e) => CurrencyInfo(
-        Currency.number(e['currencyCodeA']),
-        Currency.number(e['currencyCodeB']),
-        double.parse(
-            e.containsKey('rateCross') ? e['rateCross'] : e['rateSell']),
-        double.parse(
-            e.containsKey('rateCross') ? e['rateCross'] : e['rateBuy'])));
+          Currency.number(e['currencyCodeA']),
+          Currency.number(e['currencyCodeB']),
+          double.parse(
+              (e.containsKey('rateCross') ? e['rateCross'] : e['rateSell'])
+                  .toString()),
+          double.parse(
+              (e.containsKey('rateCross') ? e['rateCross'] : e['rateBuy'])
+                  .toString()),
+        ));
   }
 }
 
