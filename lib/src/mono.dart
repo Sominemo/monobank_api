@@ -517,8 +517,10 @@ mixin CurrencyMethods on API {
     return curs.map<CurrencyInfo>((e) => CurrencyInfo(
         Currency.number(e['currencyCodeA']),
         Currency.number(e['currencyCodeB']),
-        (e.containsKey('rateCross') ? e['rateCross'] : e['rateSell']),
-        (e.containsKey('rateCross') ? e['rateCross'] : e['rateBuy'])));
+        double.parse(
+            e.containsKey('rateCross') ? e['rateCross'] : e['rateSell']),
+        double.parse(
+            e.containsKey('rateCross') ? e['rateCross'] : e['rateBuy'])));
   }
 }
 

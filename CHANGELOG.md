@@ -1,3 +1,6 @@
+## 1.2.1
+- Fixed CurrencyInfo integer parsing error
+
 ## 1.2.0
 - Support for iban
 - Support for fop account type
