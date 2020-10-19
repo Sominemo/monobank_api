@@ -1,4 +1,4 @@
-import 'package:monobank_api/mcc/mcc.dart';
+import 'package:monobank_api/mcc.dart';
 import 'package:monobank_api/monobank_api.dart';
 
 /// Default library domain that's being used

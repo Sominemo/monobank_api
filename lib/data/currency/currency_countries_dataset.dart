@@ -1,3 +1,11 @@
+/// Currency countries dataset
+///
+/// Contains info about possible countries some currencies are being used in
+///
+/// {@category Datasets}
+/// {@subCategory Currency}
+library currency_countries_dataset;
+
 const Map<String, List<String>> Iso4217Countries = {
   '8': ['Albania'],
   '12': ['Algeria'],

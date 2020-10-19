@@ -1,3 +1,11 @@
+/// ISO-4217 dataset
+///
+/// Describes currencies: their number, code and digits
+///
+/// {@category Datasets}
+/// {@subCategory Currency}
+library iso4217_dataset;
+
 const List<Map<String, dynamic>> Iso4217 = [
   {'code': 'AED', 'number': 784, 'digits': 2},
   {'code': 'AFN', 'number': 971, 'digits': 2},

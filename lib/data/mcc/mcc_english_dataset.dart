@@ -1,3 +1,11 @@
+/// MCC English dataset
+///
+/// English names for MCCs
+///
+/// {@category Datasets}
+/// {@subCategory MCC}
+library mcc_english_dataset;
+
 const Map<String, String> MCCEnglishDataset = {
   '1520': 'General Contractors',
   '1711': 'Heating, Plumbing, A/C',

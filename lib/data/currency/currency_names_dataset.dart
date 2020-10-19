@@ -1,3 +1,11 @@
+/// Currency names dataset
+///
+/// Contains info about possible names of some currencies
+///
+/// {@category Datasets}
+/// {@subCategory Currency}
+library currency_names_dataset;
+
 const Map<String, String> Iso4217Names = {
   '8': 'Lek',
   '12': 'Algerian Dinar',

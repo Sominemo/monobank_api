@@ -1,3 +1,11 @@
+/// MCC visuals dataset
+///
+/// Visuals (color, material icon name) for MCCs
+///
+/// {@category Datasets}
+/// {@subCategory MCC}
+library mcc__dataset;
+
 const Map<String, Map<String, String>> MCCVisualsDataset = {
   '🐕': {'icon': 'pets', 'color': '#ff9800'},
   '🐶': {'icon': 'pets', 'color': '#ff9800'},

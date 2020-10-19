@@ -1,3 +1,11 @@
+/// MCC emoji dataset
+///
+/// Emoji representations for some MCCs
+///
+/// {@category Datasets}
+/// {@subCategory MCC}
+library mcc_emoji_dataset;
+
 const Map<String, List<int>> MCCEmojiDataset = {
   '\uD83D\uDC15': [742, 5995],
   '\uD83D\uDE9C': [763],

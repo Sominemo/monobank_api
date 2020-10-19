@@ -1,3 +1,11 @@
+/// MCC Ukrainian dataset
+///
+/// Ukrainian names for MCCs
+///
+/// {@category Datasets}
+/// {@subCategory MCC}
+library mcc_ukrainian_dataset;
+
 const Map<String, String> MCCUkrainianDataset = {
   '1520': 'Будівництво. Підрядники',
   '1711': 'Кондиціонери. Встановлення',

@@ -1,3 +1,11 @@
+/// MCC Russian dataset
+///
+/// Russian names for MCCs
+///
+/// {@category Datasets}
+/// {@subCategory MCC}
+library mcc_russian_dataset;
+
 const Map<String, String> MCCRussianDataset = {
   '1520': 'Строительство. Подрядчики',
   '1711': 'Кондиционеры. Установка',

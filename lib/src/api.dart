@@ -275,7 +275,7 @@ class API {
   /// No authenication Root path
   ///
   /// Is being used instead of [API.domain] when [API.token] is
-  /// not present or [APIRequst.useAuth] == `false`.
+  /// not present or [APIRequest.useAuth] == `false`.
   ///
   /// Defaults to [API.domain]
   final Uri noAuthDomain;
@@ -283,7 +283,7 @@ class API {
   /// Request credential
   ///
   /// Is being appended in [API.authAttacher] when
-  /// [APIRequst.useAuth] == `true`.
+  /// [APIRequest.useAuth] == `true`.
   final String token;
 
   /// Minimal timeout between all requests
