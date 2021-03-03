@@ -11,7 +11,10 @@ extension EmojiMCC on MCC {
   static String fallbackEmoji = '💳';
 
   /// Related emoji
-  String get emoji =>
-      MCCEmojiDataset.keys.firstWhere((e) => MCCEmojiDataset[e].contains(code),
-          orElse: () => fallbackEmoji);
+  String get emoji => MCCEmojiDataset.keys.firstWhere((e) {
+        final emoji = MCCEmojiDataset[e];
+
+        if (emoji == null) return false;
+        return emoji.contains(code);
+      }, orElse: () => fallbackEmoji);
 }

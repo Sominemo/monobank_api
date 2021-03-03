@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 
 /// Possible error types that happen to API
@@ -136,18 +135,18 @@ class APIRequest {
     this.useAuth = false,
 
     /// JSON body to send
-    Map<String, String> data,
+    Map<String, String> data = const {},
 
     /// Headers to send
     ///
     /// ```
     /// Key: Value
     /// ```
-    Map<String, String> headers,
+    Map<String, String> headers = const {},
     this.httpMethod = APIHttpMethod.GET,
   })  : _completer = Completer(),
-        data = data ?? {},
-        headers = headers ?? {},
+        data = Map.from(data),
+        headers = Map.from(headers),
         _originalData = data,
         _originalHeaders = headers;
 
@@ -169,7 +168,7 @@ class APIRequest {
   /// ```
   /// APIRequestA.methodId == APIRequestB.methodId
   /// ```
-  final String methodId;
+  final String? methodId;
 
   /// API Request Flags
   ///
@@ -240,7 +239,7 @@ class APIResponse {
   /// HTTP Response headers
   final Map<String, String> headers;
 
-  APIResponse._(this.body, this.statusCode, this.headers);
+  const APIResponse._(this.body, this.statusCode, this.headers);
 }
 
 /// Requests sender and throttling container
@@ -261,10 +260,10 @@ class API {
     this.domain, {
     this.globalTimeout = Duration.zero,
     this.token,
-    Map<String, Duration> requestTimeouts,
-    Uri noAuthDomain,
+    Map<String, Duration> requestTimeouts = const {},
+    Uri? noAuthDomain,
   }) : noAuthDomain = noAuthDomain ?? domain {
-    this.requestTimeouts = requestTimeouts ?? {};
+    this.requestTimeouts = requestTimeouts;
   }
 
   /// Root path
@@ -284,7 +283,7 @@ class API {
   ///
   /// Is being appended in [API.authAttacher] when
   /// [APIRequest.useAuth] == `true`.
-  final String token;
+  final String? token;
 
   /// Minimal timeout between all requests
   ///
@@ -337,7 +336,7 @@ class API {
   /// Returns last time request of class was sent if specified
   ///
   /// Returns `DateTime.fromMillisecondsSinceEpoch(0)` if never was sent
-  DateTime lastRequest({String methodId}) => methodId == null
+  DateTime lastRequest({String? methodId}) => methodId == null
       ? _lastRequest
       : (_lastRequests[methodId] ?? DateTime.fromMillisecondsSinceEpoch(0));
 
@@ -347,7 +346,7 @@ class API {
   ///
   /// Must be checked again before sending the request, because it returns
   /// **minimum** required time, not the actual one
-  Duration willFreeIn({String methodId}) {
+  Duration willFreeIn({String? methodId}) {
     // Time since last request
     final timePassed = DateTime.now().difference(_lastRequest);
 
@@ -388,7 +387,7 @@ class API {
   ///
   /// Can be also calculated by comparasion of API.isRequestImmediate
   /// to [Duration.zero]
-  bool isRequestImmediate(String methodId) =>
+  bool isRequestImmediate(String? methodId) =>
       willFreeIn(methodId: methodId) == Duration.zero;
 
   /// Evaluate the request
@@ -450,7 +449,7 @@ class API {
 
     Duration globalWait;
 
-    Duration minDelay;
+    Duration? minDelay;
 
     for (var request in _cart.toList()) {
       try {
@@ -462,7 +461,7 @@ class API {
                   (request.settings & APIFlags.skipGlobal != 0))) {
             minDelay = (minDelay == null
                 ? methodWait
-                : math.min(minDelay, methodWait));
+                : (minDelay > methodWait ? methodWait : minDelay));
             continue;
           }
         }
@@ -501,17 +500,23 @@ class API {
     final url = request.useAuth ? domain : noAuthDomain;
     final beforeSentMethodTime = lastRequest(methodId: request.methodId);
     final beforeSentTime = lastRequest();
+    final methodId = request.methodId;
+
     try {
       request._isProcessingNeeded = false;
       var inLine = (request.settings & APIFlags.skip == 0) &&
           (request.settings & APIFlags.skipGlobal == 0);
       _lastRequest = DateTime.now();
-      _lastRequests[request.methodId] = DateTime.now();
-      if (inLine) {
-        _methodBusy[request.methodId] = true;
+
+      if (methodId != null) {
+        _lastRequests[methodId] = DateTime.now();
+        if (inLine) {
+          _methodBusy[methodId] = true;
+        }
       }
 
-      final requestUrl = '$url${request.method}';
+      final requestUrl = url.replace(
+          pathSegments: [...url.pathSegments, ...request.method.split('/')]);
       preprocessRequest(request);
       if (request.useAuth) authAttacher(request);
 
@@ -536,15 +541,15 @@ class API {
 
       final stamp = DateTime.now();
       _lastRequest = stamp;
-      _lastRequests[request.methodId] = stamp;
+      if (methodId != null) _lastRequests[methodId] = stamp;
 
       if (inLine) {
-        _methodBusy[request.methodId] = false;
+        if (methodId != null) _methodBusy[methodId] = false;
       }
       request._completer.complete(resolver);
     } on APIError catch (e) {
       _lastRequest = beforeSentTime;
-      _lastRequests[request.methodId] = beforeSentMethodTime;
+      if (methodId != null) _lastRequests[methodId] = beforeSentMethodTime;
 
       if ((e.isFloodError && request.settings & APIFlags.resendOnFlood > 0) ||
           request.settings & APIFlags.resend > 0) {
@@ -554,18 +559,19 @@ class API {
       }
     } catch (e) {
       _lastRequest = beforeSentTime;
-      _lastRequests[request.methodId] = beforeSentMethodTime;
+      if (methodId != null) _lastRequests[methodId] = beforeSentMethodTime;
 
       request._completer.completeError(e);
       rethrow;
     }
 
-    _methodBusy[request.methodId] = false;
+    if (methodId != null) _methodBusy[methodId] = false;
   }
 
   /// Attaches credentials to given request
   void authAttacher(APIRequest request) {
-    request.headers['X-Token'] = token;
+    final localToken = token;
+    if (localToken != null) request.headers['X-Token'] = localToken;
   }
 
   /// Preprocesses given request

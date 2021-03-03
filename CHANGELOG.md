@@ -1,6 +1,11 @@
+## 1.4.0-nullsafety.1
+- Null safety
+- Bugs fixed
+
 ## 1.3.0
 - Breaking change: /mcc/mcc.dart removed
 - Docs fixes
+
 ## 1.2.2
 - Fixed CurrencyInfo integer parsing error
 

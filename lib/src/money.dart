@@ -49,11 +49,11 @@ class Currency {
     /// XXX code to look for
     String code,
   ) {
-    var upperCode = code.toUpperCase();
-    var info = Iso4217.firstWhere((currency) => currency['code'] == upperCode,
-        orElse: () => null);
+    final upperCode = code.toUpperCase();
+    final info = Iso4217.firstWhere((currency) => currency['code'] == upperCode,
+        orElse: () => {});
 
-    if (info == null) return UnknownCurrency(code);
+    if (!info.containsKey('code')) return UnknownCurrency(code);
 
     return Currency(info['code'], info['number'], info['digits']);
   }
@@ -65,10 +65,10 @@ class Currency {
     /// ISO-4217 number to look for
     int number,
   ) {
-    var info = Iso4217.firstWhere((currency) => currency['number'] == number,
-        orElse: () => null);
+    final info = Iso4217.firstWhere((currency) => currency['number'] == number,
+        orElse: () => {});
 
-    if (info == null) return UnknownCurrency(number.toString());
+    if (!info.containsKey('code')) return UnknownCurrency(number.toString());
 
     return Currency(info['code'], info['number'], info['digits']);
   }
@@ -196,7 +196,7 @@ class Money implements Comparable {
 
   /// Accepts main and fractional part of the amount as two integers
   factory Money.separated(int integer, int fraction, Currency currency) =>
-      Money(integer * pow(10, currency.digits) + fraction, currency);
+      Money(integer * pow(10, currency.digits).floor() + fraction, currency);
 
   /// Constant for zero amount of a [Currency.dummy] currency
   static const Money zero = Money(0, Currency.dummy);
@@ -216,7 +216,7 @@ class Money implements Comparable {
   @override
   int compareTo(other) {
     if (other is! Money) throw Exception('Money can be compared only to Money');
-    Money second = other;
+    final second = other;
 
     if (this > second) return 1;
     if (this < second) return -1;
@@ -446,7 +446,7 @@ class CurrencyInfo {
   /// Shortcut to create conversion objects with same sell rate and currency rate
   factory CurrencyInfo.cross(
           Currency currencyA, Currency currencyB, double rateCross,
-          {MoneyRounding rounding}) =>
+          {MoneyRounding? rounding}) =>
       CurrencyInfo(currencyA, currencyB, rateCross, rateCross,
-          rounding: rounding);
+          rounding: rounding!);
 }

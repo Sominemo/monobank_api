@@ -17,8 +17,8 @@ extension VisualsMCC on MCC {
   Map<String, String> get visuals => MCCVisualsDataset[emoji] ?? fallbackVisual;
 
   /// Get possible color for use
-  String get color => visuals['color'];
+  String get color => visuals['color'] ?? 'crefit_card';
 
   /// Get Material icon name: https://material.io/icons
-  String get icon => visuals['icon'];
+  String get icon => visuals['icon'] ?? '#607d8b';
 }

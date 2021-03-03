@@ -4,8 +4,22 @@ import 'dart:io';
 import 'package:monobank_api/monobank_api.dart';
 import 'package:test/test.dart';
 
+class EmptyApiResponse implements APIResponse {
+  EmptyApiResponse()
+      : body = {},
+        statusCode = 0,
+        headers = {};
+
+  @override
+  final dynamic body;
+  @override
+  final int statusCode;
+  @override
+  final Map<String, String> headers;
+}
+
 void main() {
-  API api;
+  var api = API(Uri.parse('http://example.com/'));
   const threshold = 100;
   const timeouts = {
     'test-class1': Duration(seconds: 1),
@@ -62,7 +76,7 @@ void main() {
       try {
         await api.call(APIRequest('test', useAuth: true));
         fail('Invalid call didn\'t throw anything');
-      } catch (e) {
+      } on APIError catch (e) {
         expect(e.isAccessError, equals(true));
       }
     });
@@ -82,15 +96,19 @@ void main() {
   });
 
   group('With Server', () {
-    HttpServer server;
-    Uri url;
-    API api;
-    DateTime time;
+    HttpServer? server;
+    Uri? url;
+    var api = API(Uri.parse('https://example.com'));
+    DateTime? time;
 
     setUp(() async {
-      server = await HttpServer.bind('localhost', 0);
-      url = Uri.parse('http://${server.address.host}:${server.port}/');
-      api = API(url, globalTimeout: Duration(seconds: 3), requestTimeouts: {
+      final s = await HttpServer.bind('localhost', 0);
+      server = s;
+
+      final u = Uri.parse('http://${s.address.host}:${s.port}/');
+      url = u;
+
+      api = API(u, globalTimeout: Duration(seconds: 3), requestTimeouts: {
         'test-class1': Duration(seconds: 5),
         'test-class2': Duration(seconds: 2),
         'test-class3': Duration(seconds: 0),
@@ -99,16 +117,18 @@ void main() {
     });
 
     tearDown(() async {
-      await server.close(force: true);
+      final s = server;
+      if (s == null) return;
+
+      await s.close(force: true);
       server = null;
       url = null;
-      api = null;
       time = null;
     });
 
     test('Method is being passed correctly', () {
       api.call(APIRequest('test-method'));
-      server.listen(expectAsync1((request) async {
+      server?.listen(expectAsync1((request) async {
         request.response.write('{}');
         await request.response.close();
 
@@ -118,20 +138,20 @@ void main() {
 
     test('Initial request is being sent immediatelly', () {
       api.call(APIRequest('test-method'));
-      server.listen(expectAsync1((request) async {
+      server?.listen(expectAsync1((request) async {
         var received = DateTime.now();
 
         request.response.write('{}');
         await request.response.close();
 
-        expect(received.difference(time),
+        expect(received.difference(time ?? DateTime(0)),
             lessThan(Duration(milliseconds: threshold)));
       }));
     });
 
     test('Methods can be busy', () {
       api.call(APIRequest('test-method', methodId: 'test-class1'));
-      server.listen(expectAsync1((request) async {
+      server?.listen(expectAsync1((request) async {
         var business = api.isMethodBusy('test-class1');
 
         request.response.write('{}');
@@ -145,7 +165,7 @@ void main() {
       var originalTime = api.lastRequest();
       api.call(APIRequest('test-method'));
 
-      server.listen(expectAsync1((request) async {
+      server?.listen(expectAsync1((request) async {
         request.response.write('{}');
         await request.response.close();
 
@@ -156,7 +176,7 @@ void main() {
     test('Request time is being recorded correctly', () {
       api.call(APIRequest('test-method'));
 
-      server.listen(expectAsync1((request) async {
+      server?.listen(expectAsync1((request) async {
         request.response.write('{}');
         await request.response.close();
 
@@ -169,7 +189,7 @@ void main() {
       var originalTime = api.lastRequest(methodId: 'test-class1');
       api.call(APIRequest('test-method', methodId: 'test-class1'));
 
-      server.listen(expectAsync1((request) async {
+      server?.listen(expectAsync1((request) async {
         request.response.write('{}');
         await request.response.close();
 
@@ -179,13 +199,13 @@ void main() {
     });
 
     group('Clonnig and Delivery', () {
-      API api;
+      var api = API(Uri());
       APIRequest originalAPIRequest, cloneAPIRequest;
-      HttpRequest originalRequest, cloneRequest;
+      HttpRequest? originalRequest, cloneRequest;
       var oDec, cDec;
 
       setUp(() async {
-        api = API(url, token: 'my-test-token');
+        api = API(url ?? Uri(), token: 'my-test-token');
 
         originalAPIRequest = APIRequest('test-method',
             data: {'test-field': 'test-value'},
@@ -196,13 +216,13 @@ void main() {
 
         cloneAPIRequest = APIRequest.clone(originalAPIRequest);
 
-        server.listen((request) async {
+        server?.listen((request) async {
           if (originalRequest == null) {
             originalRequest = request;
-            oDec = jsonDecode(await utf8.decodeStream(originalRequest));
+            oDec = jsonDecode(await utf8.decodeStream(originalRequest!));
           } else {
             cloneRequest = request;
-            cDec = jsonDecode(await utf8.decodeStream(cloneRequest));
+            cDec = jsonDecode(await utf8.decodeStream(cloneRequest!));
           }
 
           request.response.write('{}');
@@ -214,21 +234,21 @@ void main() {
       });
 
       test('Method', () {
-        expect(originalRequest.uri, equals(cloneRequest.uri));
+        expect(originalRequest?.uri, equals(cloneRequest?.uri));
       });
 
       test('HTTP Method', () {
-        expect(originalRequest.method, equals(cloneRequest.method));
+        expect(originalRequest?.method, equals(cloneRequest?.method));
       });
 
       test('Header', () {
-        expect(originalRequest.headers.value('X-Test-Header'),
-            equals(cloneRequest.headers.value('X-Test-Header')));
+        expect(originalRequest?.headers.value('X-Test-Header'),
+            equals(cloneRequest?.headers.value('X-Test-Header')));
       });
 
       test('Token', () {
-        expect(originalRequest.headers.value('X-Token'),
-            equals(cloneRequest.headers.value('X-Token')));
+        expect(originalRequest?.headers.value('X-Token'),
+            equals(cloneRequest?.headers.value('X-Token')));
       });
 
       test('Body value', () {
@@ -243,10 +263,10 @@ void main() {
           'test-class2': Duration(seconds: 1),
           'test-class3': Duration(seconds: 0),
         };
-        API api;
+        var api = API(Uri());
 
         setUp(() {
-          api = API(url,
+          api = API(url ?? Uri(),
               globalTimeout: Duration(seconds: 2), requestTimeouts: timeouts);
         });
 
@@ -255,19 +275,19 @@ void main() {
           var request = APIRequest('test-method',
               settings: APIFlags.waiting, methodId: 'test-class1');
 
-          DateTime lastTime;
+          DateTime? lastTime;
 
-          server.listen(expectAsync1((request) async {
+          server?.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
 
             if (lastTime == null) {
               lastTime = DateTime.now();
 
-              expect(lastTime.difference(time),
+              expect(lastTime?.difference(time!),
                   lessThan(Duration(milliseconds: threshold)));
             } else {
-              expect(DateTime.now().difference(lastTime).inMilliseconds,
+              expect(DateTime.now().difference(lastTime!).inMilliseconds,
                   inClosedOpenRange(wait, wait + threshold));
             }
           }, count: 2));
@@ -280,20 +300,20 @@ void main() {
           var request = APIRequest('test-method',
               settings: APIFlags.waiting, methodId: 'test-class2');
 
-          DateTime lastTime;
+          DateTime? lastTime;
 
-          server.listen(expectAsync1((request) async {
+          server?.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
 
             if (lastTime == null) {
               lastTime = DateTime.now();
 
-              expect(lastTime.difference(time),
+              expect(lastTime?.difference(time!),
                   lessThan(Duration(milliseconds: threshold)));
             } else {
               expect(
-                  DateTime.now().difference(lastTime).inMilliseconds,
+                  DateTime.now().difference(lastTime!).inMilliseconds,
                   inClosedOpenRange(api.globalTimeout.inMilliseconds,
                       api.globalTimeout.inMilliseconds + threshold));
             }
@@ -306,36 +326,46 @@ void main() {
         test('skip: Throws without agreeing for waiting', () {
           var request = APIRequest('test-method', settings: APIFlags.skip);
 
-          server.listen(expectAsync1((request) async {
+          server?.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
             // Request must not be delivered
           }, count: 0));
-          api.call(request).catchError(expectAsync1((error) {
-            expect(error.isIllegalRequestError, equals(true));
-          }));
+
+          final cb = expectAsync1((error) {
+            if (error is APIError) {
+              expect(error.isIllegalRequestError, equals(true));
+            }
+
+            return error;
+          });
+
+          api.call(request).catchError((o) {
+            cb(o);
+            return EmptyApiResponse();
+          });
         });
 
         test('skip | waiting: Works on no-throttling', () {
-          api = API(url);
+          api = API(url!);
           var wait = Duration.zero.inMilliseconds;
           var request = APIRequest('test-method',
               settings: APIFlags.skip | APIFlags.waiting,
               methodId: 'test-class1');
 
-          DateTime lastTime;
+          DateTime? lastTime;
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
 
             if (lastTime == null) {
               lastTime = DateTime.now();
 
-              expect(lastTime.difference(time),
+              expect(lastTime!.difference(time!),
                   lessThan(Duration(milliseconds: threshold)));
             } else {
-              expect(DateTime.now().difference(lastTime).inMilliseconds,
+              expect(DateTime.now().difference(lastTime!).inMilliseconds,
                   inClosedOpenRange(wait, wait + threshold));
             }
           }, count: 2));
@@ -345,25 +375,25 @@ void main() {
         }, timeout: Timeout(Duration(seconds: 1)));
 
         test('skipGlobal | waiting: Works on no-throttling', () {
-          api = API(url);
+          api = API(url!);
           var wait = Duration.zero.inMilliseconds;
           var request = APIRequest('test-method',
               settings: APIFlags.skipGlobal | APIFlags.waiting,
               methodId: 'test-class2');
 
-          DateTime lastTime;
+          DateTime? lastTime;
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
 
             if (lastTime == null) {
               lastTime = DateTime.now();
 
-              expect(lastTime.difference(time),
+              expect(lastTime!.difference(time!),
                   lessThan(Duration(milliseconds: threshold)));
             } else {
-              expect(DateTime.now().difference(lastTime).inMilliseconds,
+              expect(DateTime.now().difference(lastTime!).inMilliseconds,
                   inClosedOpenRange(wait, wait + threshold));
             }
           }, count: 2));
@@ -376,22 +406,31 @@ void main() {
           var request =
               APIRequest('test-method', settings: APIFlags.skipGlobal);
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
             fail('Request must not be delivered');
           }, count: 0));
 
-          api.call(request).catchError(expectAsync1((error) {
-            expect(error.isIllegalRequestError, equals(true));
-          }));
+          final cb = expectAsync1((error) {
+            if (error is APIError) {
+              expect(error.isIllegalRequestError, equals(true));
+            }
+
+            return error;
+          });
+
+          api.call(request).catchError((o) {
+            cb(o);
+            return EmptyApiResponse();
+          });
         });
 
         test('resend', () {
           var count = 0;
           var request = APIRequest('test-method', settings: APIFlags.resend);
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             if (count == 0) {
               request.response.statusCode = HttpStatus.forbidden;
               count++;
@@ -409,7 +448,7 @@ void main() {
               settings: APIFlags.resendOnFlood | APIFlags.waiting);
           var request2 = APIRequest('test-method2');
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             count++;
             if (count == 1) {
               request.response.statusCode = HttpStatus.tooManyRequests;
@@ -440,19 +479,19 @@ void main() {
               settings: APIFlags.skip | APIFlags.waiting,
               methodId: 'test-class1');
 
-          DateTime lastTime;
+          DateTime? lastTime;
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
 
             if (lastTime == null) {
               lastTime = DateTime.now();
 
-              expect(lastTime.difference(time),
+              expect(lastTime!.difference(time!),
                   lessThan(Duration(milliseconds: threshold)));
             } else {
-              expect(DateTime.now().difference(lastTime).inMilliseconds,
+              expect(DateTime.now().difference(lastTime!).inMilliseconds,
                   inClosedOpenRange(wait, wait + threshold));
             }
           }, count: 2));
@@ -467,19 +506,19 @@ void main() {
               settings: APIFlags.skip | APIFlags.waiting,
               methodId: 'test-class2');
 
-          DateTime lastTime;
+          DateTime? lastTime;
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
 
             if (lastTime == null) {
               lastTime = DateTime.now();
 
-              expect(lastTime.difference(time),
+              expect(lastTime!.difference(time!),
                   lessThan(Duration(milliseconds: threshold)));
             } else {
-              expect(DateTime.now().difference(lastTime).inMilliseconds,
+              expect(DateTime.now().difference(lastTime!).inMilliseconds,
                   inClosedOpenRange(wait, wait + threshold));
             }
           }, count: 2));
@@ -494,19 +533,19 @@ void main() {
               settings: APIFlags.skipGlobal | APIFlags.waiting,
               methodId: 'test-class1');
 
-          DateTime lastTime;
+          DateTime? lastTime;
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
 
             if (lastTime == null) {
               lastTime = DateTime.now();
 
-              expect(lastTime.difference(time),
+              expect(lastTime!.difference(time!),
                   lessThan(Duration(milliseconds: threshold)));
             } else {
-              expect(DateTime.now().difference(lastTime).inMilliseconds,
+              expect(DateTime.now().difference(lastTime!).inMilliseconds,
                   inClosedOpenRange(wait, wait + threshold));
             }
           }, count: 2));
@@ -522,19 +561,19 @@ void main() {
               settings: APIFlags.skipGlobal | APIFlags.waiting,
               methodId: 'test-class2');
 
-          DateTime lastTime;
+          DateTime? lastTime;
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
 
             if (lastTime == null) {
               lastTime = DateTime.now();
 
-              expect(lastTime.difference(time),
+              expect(lastTime!.difference(time!),
                   lessThan(Duration(milliseconds: threshold)));
             } else {
-              expect(DateTime.now().difference(lastTime).inMilliseconds,
+              expect(DateTime.now().difference(lastTime!).inMilliseconds,
                   inClosedOpenRange(wait, wait + threshold));
             }
           }, count: 2));
@@ -547,29 +586,38 @@ void main() {
           var request = APIRequest('test-method',
               settings: APIFlags.skip | APIFlags.skipGlobal | APIFlags.waiting);
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             request.response.write('{}');
             await request.response.close();
             fail('Request must not be delivered');
           }, count: 0));
 
-          api.call(request).catchError(expectAsync1((error) {
-            expect(error.isIllegalRequestError, equals(true));
-          }));
+          final cb = expectAsync1((error) {
+            if (error is APIError) {
+              expect(error.isIllegalRequestError, equals(true));
+            }
+
+            return error;
+          });
+
+          api.call(request).catchError((o) {
+            cb(o);
+            return EmptyApiResponse();
+          });
         });
 
         test('resendOnFlood | waiting: Correct wait times for global',
             () async {
-          DateTime last;
+          DateTime? last;
           var request1 = APIRequest('test-method',
               settings: APIFlags.resendOnFlood | APIFlags.waiting);
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             if (last == null) {
               last = DateTime.now();
               request.response.statusCode = HttpStatus.tooManyRequests;
             } else {
-              expect(DateTime.now().difference(last).inMilliseconds,
+              expect(DateTime.now().difference(last!).inMilliseconds,
                   closeTo(0, threshold));
             }
             request.response.write('{}');
@@ -581,17 +629,17 @@ void main() {
 
         test('resendOnFlood | waiting: Correct wait times for method',
             () async {
-          DateTime last;
+          DateTime? last;
           var request1 = APIRequest('test-method',
               settings: APIFlags.resendOnFlood | APIFlags.waiting,
               methodId: 'test-class1');
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             if (last == null) {
               last = DateTime.now();
               request.response.statusCode = HttpStatus.tooManyRequests;
             } else {
-              expect(DateTime.now().difference(last).inMilliseconds,
+              expect(DateTime.now().difference(last!).inMilliseconds,
                   closeTo(0, threshold));
             }
             request.response.write('{}');
@@ -602,16 +650,16 @@ void main() {
         });
 
         test('resend | waiting: Correct wait times for global', () async {
-          DateTime last;
+          DateTime? last;
           var request1 = APIRequest('test-method',
               settings: APIFlags.resend | APIFlags.waiting);
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             if (last == null) {
               last = DateTime.now();
               request.response.statusCode = HttpStatus.notFound;
             } else {
-              expect(DateTime.now().difference(last).inMilliseconds,
+              expect(DateTime.now().difference(last!).inMilliseconds,
                   closeTo(0, threshold));
             }
             request.response.write('{}');
@@ -622,17 +670,17 @@ void main() {
         });
 
         test('resend | waiting: Correct wait times for method', () async {
-          DateTime last;
+          DateTime? last;
           var request1 = APIRequest('test-method',
               settings: APIFlags.resend | APIFlags.waiting,
               methodId: 'test-class1');
 
-          server.listen(expectAsync1((request) async {
+          server!.listen(expectAsync1((request) async {
             if (last == null) {
               last = DateTime.now();
               request.response.statusCode = HttpStatus.tooManyRequests;
             } else {
-              expect(DateTime.now().difference(last).inMilliseconds,
+              expect(DateTime.now().difference(last!).inMilliseconds,
                   closeTo(0, threshold));
             }
             request.response.write('{}');

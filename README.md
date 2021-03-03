@@ -1,6 +1,6 @@
 # Monobank API SDK for Dart
 
-Author is not related to monobank team.
+This package is unofficial
 
 ## Usage
 

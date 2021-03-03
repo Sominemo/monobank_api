@@ -80,27 +80,21 @@ class BankCard {
     switch (type) {
       case 'black':
         return CardType.black;
-        break;
 
       case 'white':
         return CardType.white;
-        break;
 
       case 'platinum':
         return CardType.platinum;
-        break;
 
       case 'iron':
         return CardType.iron;
-        break;
 
       case 'yellow':
         return CardType.yellow;
-        break;
 
       case 'fop':
         return CardType.fop;
-        break;
 
       default:
         return CardType.other;
@@ -118,6 +112,12 @@ class Client {
     var list = accs.map((e) => Account._fromJson(e, this)).toList();
 
     if (sortAccounts) {
+      const uahOrder = [
+        CardType.black,
+        CardType.white,
+        CardType.yellow,
+        CardType.fop
+      ];
       const curOrder = ['UAH', 'USD', 'EUR', 'PLN'];
 
       list.sort((a, b) => a.id.compareTo(b.id));
@@ -140,15 +140,42 @@ class Client {
       });
 
       uah.sort((a, b) {
-        if (a.type == CardType.white && b.type != CardType.white) {
+        final indA = uahOrder.indexOf(a.type);
+        final indB = uahOrder.indexOf(b.type);
+
+        if (indA == -1 && indB == -1) {
+          return 0;
+        }
+        if (indA == -1 && indB != -1) {
+          return 1;
+        }
+        if (indA != -1 && indB == -1) {
+          return -1;
+        }
+
+        if (indA < indB) {
+          return -1;
+        }
+        if (indA > indB) {
           return 1;
         }
         return 0;
       });
 
       known.sort((a, b) {
-        var indA = curOrder.indexOf(a.balance.currency.code);
-        var indB = curOrder.indexOf(b.balance.currency.code);
+        final indA = curOrder.indexOf(a.balance.currency.code);
+        final indB = curOrder.indexOf(b.balance.currency.code);
+
+        if (indA == -1 && indB == -1) {
+          return 0;
+        }
+        if (indA == -1 && indB != -1) {
+          return 1;
+        }
+        if (indA != -1 && indB == -1) {
+          return -1;
+        }
+
         if (indA < indB) {
           return -1;
         }
@@ -276,7 +303,10 @@ class StatementItem {
           account.balance.currency,
         ),
         comment = data['comment'] ?? '',
-        hold = data['hold'];
+        hold = data['hold'],
+        receiptId = data['receiptId'],
+        counterEdrpou = data['counterEdrpou'],
+        counterIban = data['counterIban'];
 
   /// Parent account
   final Account account;
@@ -314,6 +344,15 @@ class StatementItem {
   /// Authorization hold
   final bool hold;
 
+  // Check number on check.gov.ua
+  final String? receiptId;
+
+  // Counteragent Edrpou number, is available only for accounts with `fop` type
+  final String? counterEdrpou;
+
+  // Counteragent Iban number, is available only for accounts with `fop` type
+  final String? counterIban;
+
   /// Returns true if operation is outgoing
   bool get isOut => amount.isNegative;
 
@@ -342,7 +381,7 @@ class Statement {
   /// End on
   final DateTime to;
 
-  static const Duration _maxRange = Duration(days: 31);
+  static const Duration _maxRange = Duration(days: 7);
 
   /// Begins stream of statement
   ///
