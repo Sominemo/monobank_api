@@ -1,3 +1,7 @@
+## 1.4.0
+- Null safety
+- Bugs fixed
+
 ## 1.4.0-nullsafety.1
 - Null safety
 - Bugs fixed

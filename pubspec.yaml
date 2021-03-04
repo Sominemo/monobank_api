@@ -4,11 +4,11 @@ description: >
 
   Supports getting currencies and grabbing statement
 
-version: 1.4.0-nullsafety.1
+version: 1.4.0
 homepage: https://github.com/Sominemo/monobank_api
 
 environment:
-  sdk: ">=2.12.0-0 <3.0.0"
+  sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
   http: ^0.13.0
