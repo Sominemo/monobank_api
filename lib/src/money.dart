@@ -446,7 +446,7 @@ class CurrencyInfo {
   /// Shortcut to create conversion objects with same sell rate and currency rate
   factory CurrencyInfo.cross(
           Currency currencyA, Currency currencyB, double rateCross,
-          {MoneyRounding? rounding}) =>
+          {MoneyRounding rounding = MoneyRounding.bank}) =>
       CurrencyInfo(currencyA, currencyB, rateCross, rateCross,
-          rounding: rounding!);
+          rounding: rounding);
 }

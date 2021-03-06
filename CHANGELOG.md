@@ -1,3 +1,6 @@
+## 1.4.1
+- Bugs fixed
+
 ## 1.4.0
 - Null safety
 - Bugs fixed
