@@ -381,7 +381,7 @@ class Statement {
   /// End on
   final DateTime to;
 
-  static const Duration _maxRange = Duration(days: 7);
+  static const Duration _maxRange = Duration(days: 31);
 
   /// Begins stream of statement
   ///

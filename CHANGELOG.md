@@ -1,3 +1,6 @@
+## 1.4.2
+- Max date range extended to 31 days
+
 ## 1.4.1
 - Bugs fixed
 
