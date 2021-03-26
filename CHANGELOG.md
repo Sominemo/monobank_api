@@ -1,3 +1,6 @@
+## 1.4.3
+- Dependency update
+
 ## 1.4.2
 - Max date range extended to 31 days
 
