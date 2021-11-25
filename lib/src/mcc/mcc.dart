@@ -18,7 +18,7 @@ class MCC {
   @override
   int get hashCode => 18 + 37 * code.hashCode;
 
-  /// Comparation operator
+  /// Comparison operator
   ///
   /// Only MCC objects are allowed to be compared
   @override

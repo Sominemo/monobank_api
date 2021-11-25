@@ -55,8 +55,8 @@ class APIError {
 
   /// Checks for Illegal Request error thrown by the library
   ///
-  /// This means you are trying to send a request immediatelly when it's impossible, using
-  /// mutually-incompatiable flags or passing invalid parameters
+  /// This means you are trying to send a request immediately when it's impossible, using
+  /// mutually-incompatible flags or passing invalid parameters
   bool get isIllegalRequestError => type == APIErrorType.local && data == 2;
 
   /// Generates token error
@@ -77,7 +77,7 @@ class APIError {
 class APIFlags {
   /// Allow throttling (enabled by default)
   ///
-  /// Allows the request to be delayed if it can't be sent immediatelly. In other case [APIError.isIllegalRequestError] is thrown
+  /// Allows the request to be delayed if it can't be sent immediately. In other case [APIError.isIllegalRequestError] is thrown
   static const waiting = 1;
 
   /// Ignore by-method throttling
@@ -227,7 +227,7 @@ class APIRequest {
 class APIResponse {
   /// Response body
   ///
-  /// JSON-demarshalled body of the response.
+  /// JSON-decoded body of the response.
   ///
   /// Can be `Map<String, dynamic>` if object and `List<dynamic>` if
   /// array.
@@ -271,7 +271,7 @@ class API {
   /// All the requests are going to be subpaths of this
   final Uri domain;
 
-  /// No authenication Root path
+  /// No authentication Root path
   ///
   /// Is being used instead of [API.domain] when [API.token] is
   /// not present or [APIRequest.useAuth] == `false`.
@@ -342,7 +342,7 @@ class API {
 
   /// Returns minimum required time until request \[of class\] can be sent
   ///
-  /// Returns [Duration.zero] if the request can be sent immediatellly
+  /// Returns [Duration.zero] if the request can be sent immediately
   ///
   /// Must be checked again before sending the request, because it returns
   /// **minimum** required time, not the actual one
@@ -365,8 +365,8 @@ class API {
           DateTime.now().difference(lastRequest(methodId: methodId));
 
       // Minimum delay if the request is being sent right now
-      // This works so because the runnig request can finish with
-      // an error, so the next request will be able to be sent immediatelly
+      // This works so because the running request can finish with
+      // an error, so the next request will be able to be sent immediately
       if (isMethodBusy(methodId)) {
         return Duration(milliseconds: 1);
       }
@@ -379,13 +379,13 @@ class API {
       }
     }
 
-    // Can be sent immediatelly
+    // Can be sent immediately
     return Duration.zero;
   }
 
-  /// Returns `true` if request \[of class\] can be sent immediatelly
+  /// Returns `true` if request \[of class\] can be sent immediately
   ///
-  /// Can be also calculated by comparasion of API.isRequestImmediate
+  /// Can be also calculated by comparison of API.isRequestImmediate
   /// to [Duration.zero]
   bool isRequestImmediate(String? methodId) =>
       willFreeIn(methodId: methodId) == Duration.zero;

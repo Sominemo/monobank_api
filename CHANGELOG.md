@@ -1,3 +1,6 @@
+## 1.4.4
+- Added support for new API fields
+
 ## 1.4.3
 - Dependency update
 

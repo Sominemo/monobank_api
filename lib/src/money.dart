@@ -22,7 +22,7 @@ const Map<String, dynamic> _CurrencyStyling = {
 class Currency {
   /// Constructs currency
   ///
-  /// Currency instance is immunable
+  /// Currency instance is immutable
   const Currency(this.code, this.number, this.digits);
 
   /// ISO-4217 Currency code in `XXX` format
@@ -30,7 +30,7 @@ class Currency {
 
   /// ISO-4217 Currency number
   ///
-  /// Is being used for comparation
+  /// Is being used for comparison
   final int number;
 
   /// Length of the fraction part of a currency
@@ -76,7 +76,7 @@ class Currency {
   /// Dummy currency
   ///
   /// Used for operations with [Money] without currency which require
-  /// currency equantity
+  /// currency quantity
   static const Currency dummy = Currency('XXX', 999, 2);
 
   @override
@@ -86,9 +86,9 @@ class Currency {
     return result;
   }
 
-  /// The equantity operator
+  /// The quantity operator
   ///
-  /// Comparation depends on [Currency.number] field
+  /// Comparison depends on [Currency.number] field
   ///
   /// [UnknownCurrency] never equals to anything, even itself, except
   /// the exactly same instance
@@ -126,7 +126,7 @@ class UnknownCurrency extends Currency {
 
 /// Represents money
 ///
-/// Supports `+`, `-`, `/`, `*`, `%` and all comparation operators, but works only
+/// Supports `+`, `-`, `/`, `*`, `%` and all comparison operators, but works only
 /// with instances of the same currency. See [CurrencyInfo] to exchange
 /// currencies by rate
 class Money implements Comparable {
@@ -223,7 +223,7 @@ class Money implements Comparable {
     return 0;
   }
 
-  /// The equantity operator
+  /// The quantity operator
   ///
   /// Supports only [Money] as an argument, else throws exception
   ///
@@ -283,7 +283,7 @@ class Money implements Comparable {
     return Money(amount + other.amount, currency);
   }
 
-  /// Substracts amount of the second [Money] operand and creates new instance
+  /// Subtracts amount of the second [Money] operand and creates new instance
   ///
   /// Throws exception if currencies do not equal (see [Currency.==])
   Money operator -(Money other) {
@@ -294,7 +294,7 @@ class Money implements Comparable {
 
   /// Divides amount of the [Money] on integer operand and creates new instance
   ///
-  /// The result amount is beeing floored
+  /// The result amount is being floored
   ///
   /// Throws exception if `int == 0`
   Money operator /(int other) {
@@ -380,7 +380,7 @@ class CurrencyInfo {
   ///
   /// Accepts two currencies, sell and buy rate of currency A relative to currency B
   ///
-  /// Optionally you can specify rounding for convertations
+  /// Optionally you can specify rounding for the currency exchange
   CurrencyInfo(this.currencyA, this.currencyB, this.rateSell, this.rateBuy,
       {this.rounding = MoneyRounding.bank});
 

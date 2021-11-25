@@ -107,9 +107,9 @@ class Client {
   Client._fromJson(Map<String, dynamic> data, this.controller)
       : name = data['name'],
         id = data['clientId'] {
-    var accs = List<Map<String, dynamic>>.from(data['accounts']);
+    var accountsData = List<Map<String, dynamic>>.from(data['accounts']);
 
-    var list = accs.map((e) => Account._fromJson(e, this)).toList();
+    var list = accountsData.map((e) => Account._fromJson(e, this)).toList();
 
     if (sortAccounts) {
       const uahOrder = [
@@ -202,7 +202,7 @@ class Client {
   /// List of available accounts
   ///
   /// Monobank API returns the accounts in
-  /// different (and random) order everytime
+  /// different (and random) order every time
   ///
   /// For that, this library tries to sort
   /// the accounts to match the order in
@@ -235,7 +235,7 @@ class Cashback {
 
   /// Related object to the Cashback
   ///
-  /// double amount, if not overriden
+  /// double amount, if not overridden
   dynamic get object => amount;
 
   @override
@@ -288,6 +288,7 @@ class StatementItem {
         time = DateTime.fromMillisecondsSinceEpoch(data['time'] * 1000),
         description = data['description'],
         mcc = MCC(data['mcc']),
+        originalMcc = MCC(data['originalMcc']),
         amount = Money(data['amount'], account.balance.currency),
         operationAmount = Money(
           data['operationAmount'],
@@ -322,6 +323,9 @@ class StatementItem {
 
   /// Category
   final MCC mcc;
+
+  /// Pure transaction MCC code
+  final MCC originalMcc;
 
   /// Amount in account currency
   final Money amount;
@@ -463,6 +467,7 @@ class Account {
             Money(data['creditLimit'], Currency.number(data['currencyCode'])),
         cashbackType = data['cashbackType'],
         iban = data['iban'],
+        sendId = data['sendId'],
         type = BankCard.cardTypeFromString(data['type']),
         cards = List<String>.from(data['maskedPan'])
             .map((e) => BankCard._(
@@ -490,6 +495,9 @@ class Account {
 
   /// IBAN
   final String iban;
+
+  /// ID for send.monobank.ua/XXXX links
+  final String sendId;
 
   /// List of related cards
   final List<BankCard> cards;
