@@ -17,7 +17,7 @@ class Mask {
   final String end;
 
   factory Mask._fromString(String s) {
-    var e = s.split('*');
+    final e = s.split('*');
     return Mask._(e.first, e.last);
   }
 
@@ -105,11 +105,12 @@ class BankCard {
 /// Representation of clientInfo result
 class Client {
   Client._fromJson(Map<String, dynamic> data, this.controller)
-      : name = data['name'],
-        id = data['clientId'] {
-    var accountsData = List<Map<String, dynamic>>.from(data['accounts']);
+      : name = data['name'] as String,
+        id = data['clientId'] as String {
+    final accountsData =
+        List<Map<String, dynamic>>.from(data['accounts'] as Iterable<dynamic>);
 
-    var list = accountsData.map((e) => Account._fromJson(e, this)).toList();
+    final list = accountsData.map((e) => Account._fromJson(e, this)).toList();
 
     if (sortAccounts) {
       const uahOrder = [
@@ -127,7 +128,7 @@ class Client {
       known = [];
       unknown = [];
 
-      list.forEach((e) {
+      for (final e in list) {
         List<Account> arr;
 
         if (e.balance.currency.code == 'UAH') {
@@ -137,7 +138,7 @@ class Client {
         }
 
         arr.add(e);
-      });
+      }
 
       uah.sort((a, b) {
         final indA = uahOrder.indexOf(a.type);
@@ -273,7 +274,7 @@ class MilesCashback extends Cashback {
 }
 
 Cashback _cashback(int amount, String type) {
-  var currency = Currency.code(type);
+  final currency = Currency.code(type);
   if (currency is! UnknownCurrency) return MoneyCashback._(amount, currency);
 
   if (type == 'Miles') return MilesCashback._(amount);
@@ -284,30 +285,32 @@ Cashback _cashback(int amount, String type) {
 /// Single item from statement
 class StatementItem {
   StatementItem._fromJson(Map<String, dynamic> data, this.account)
-      : id = data['id'],
-        time = DateTime.fromMillisecondsSinceEpoch(data['time'] * 1000),
-        description = data['description'],
-        mcc = MCC(data['mcc']),
-        originalMcc = MCC(data['originalMcc']),
-        amount = Money(data['amount'], account.balance.currency),
+      : id = data['id'] as String,
+        time =
+            DateTime.fromMillisecondsSinceEpoch((data['time'] as int) * 1000),
+        description = data['description'] as String? ?? '',
+        mcc = MCC(data['mcc'] as int),
+        originalMcc = MCC(data['originalMcc'] as int),
+        amount = Money(data['amount'] as int, account.balance.currency),
         operationAmount = Money(
-          data['operationAmount'],
-          Currency.number(data['currencyCode']),
+          data['operationAmount'] as int,
+          Currency.number(data['currencyCode'] as int),
         ),
         commissionRate = Money(
-          data['commissionRate'],
-          Currency.number(data['currencyCode']),
+          data['commissionRate'] as int,
+          Currency.number(data['currencyCode'] as int),
         ),
-        cashback = _cashback(data['cashbackAmount'], account.cashbackType),
+        cashback =
+            _cashback(data['cashbackAmount'] as int, account.cashbackType),
         balance = Money(
-          data['balance'],
+          data['balance'] as int,
           account.balance.currency,
         ),
-        comment = data['comment'] ?? '',
-        hold = data['hold'],
-        receiptId = data['receiptId'],
-        counterEdrpou = data['counterEdrpou'],
-        counterIban = data['counterIban'];
+        comment = data['comment'] as String? ?? '',
+        hold = data['hold'] as bool,
+        receiptId = data['receiptId'] as String,
+        counterEdrpou = data['counterEdrpou'] as String,
+        counterIban = data['counterIban'] as String;
 
   /// Parent account
   final Account account;
@@ -416,8 +419,8 @@ class Statement {
         if (lTo.isAfter(to)) lTo = to;
       }
 
-      var f = (lFrom.millisecondsSinceEpoch / 1000).floor();
-      var t = (lTo.millisecondsSinceEpoch / 1000).floor();
+      final f = (lFrom.millisecondsSinceEpoch / 1000).floor();
+      final t = (lTo.millisecondsSinceEpoch / 1000).floor();
 
       APIResponse data;
       List<Map<String, dynamic>> body;
@@ -429,16 +432,16 @@ class Statement {
           useAuth: true,
         ));
 
-        body = List<Map<String, dynamic>>.from(data.body);
+        body = List<Map<String, dynamic>>.from(data.body as Iterable<dynamic>);
       } catch (e) {
         if (!ignoreErrors) rethrow;
         body = [];
       }
 
-      var i = (reverse ? body : body.reversed)
+      final i = (reverse ? body : body.reversed)
           .map((e) => StatementItem._fromJson(e, account));
 
-      for (var e in i) {
+      for (final e in i) {
         yield e;
       }
 
@@ -460,19 +463,19 @@ class Account {
   static bool hideCreditLimit = false;
 
   Account._fromJson(Map<String, dynamic> data, this.client)
-      : id = data['id'],
-        accountBalance =
-            Money(data['balance'], Currency.number(data['currencyCode'])),
-        creditLimit =
-            Money(data['creditLimit'], Currency.number(data['currencyCode'])),
-        cashbackType = data['cashbackType'],
-        iban = data['iban'],
-        sendId = data['sendId'],
-        type = BankCard.cardTypeFromString(data['type']),
-        cards = List<String>.from(data['maskedPan'])
+      : id = data['id'] as String,
+        accountBalance = Money(data['balance'] as int,
+            Currency.number(data['currencyCode'] as int)),
+        creditLimit = Money(data['creditLimit'] as int,
+            Currency.number(data['currencyCode'] as int)),
+        cashbackType = data['cashbackType'] as String,
+        iban = data['iban'] as String,
+        sendId = data['sendId'] as String,
+        type = BankCard.cardTypeFromString(data['type'] as String),
+        cards = List<String>.from(data['maskedPan'] as Iterable<dynamic>)
             .map((e) => BankCard._(
                   Mask._fromString(e),
-                  BankCard.cardTypeFromString(data['type']),
+                  BankCard.cardTypeFromString(data['type'] as String),
                 ))
             .toList();
 
@@ -539,12 +542,12 @@ class Account {
 mixin PersonalMethods on API {
   /// Request Client object
   Future<Client> clientInfo() async {
-    var data = await call(APIRequest(
+    final data = await call(APIRequest(
       'personal/client-info',
       methodId: 'personal/client-info',
       useAuth: true,
     ));
-    return Client._fromJson(data.body, this);
+    return Client._fromJson(data.body as Map<String, dynamic>, this);
   }
 }
 
@@ -555,15 +558,16 @@ mixin CurrencyMethods on API {
   /// Generates CurrencyInfo's from
   /// monobank currency dataF
   Future<Iterable<CurrencyInfo>> currency({bool burst = false}) async {
-    var data = await call(APIRequest(
+    final data = await call(APIRequest(
       'bank/currency',
       methodId: 'bank/currency',
       settings: (burst ? APIFlags.waiting | APIFlags.skip : APIFlags.waiting),
     ));
-    var curs = List<Map<String, dynamic>>.from(data.body);
+    final curs =
+        List<Map<String, dynamic>>.from(data.body as Iterable<dynamic>);
     return curs.map<CurrencyInfo>((e) => CurrencyInfo(
-          Currency.number(e['currencyCodeA']),
-          Currency.number(e['currencyCodeB']),
+          Currency.number(e['currencyCodeA'] as int),
+          Currency.number(e['currencyCodeB'] as int),
           double.parse(
               (e.containsKey('rateCross') ? e['rateCross'] : e['rateSell'])
                   .toString()),

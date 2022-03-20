@@ -2,7 +2,7 @@ import 'dart:math';
 
 import '../data/currency/iso4217_dataset.dart';
 
-const Map<String, dynamic> _CurrencyStyling = {
+const Map<String, String> _currencyStyling = {
   'UAH': '\u20B4',
   'RUB': '\u20bd',
   'USD': '\u0024',
@@ -51,11 +51,15 @@ class Currency {
   ) {
     final upperCode = code.toUpperCase();
     final info = Iso4217.firstWhere((currency) => currency['code'] == upperCode,
-        orElse: () => {});
+        orElse: () => <String, dynamic>{});
 
     if (!info.containsKey('code')) return UnknownCurrency(code);
 
-    return Currency(info['code'], info['number'], info['digits']);
+    return Currency(
+      info['code'] as String,
+      info['number'] as int,
+      info['digits'] as int,
+    );
   }
 
   /// Find currency by ISO-4217 currency number
@@ -66,11 +70,15 @@ class Currency {
     int number,
   ) {
     final info = Iso4217.firstWhere((currency) => currency['number'] == number,
-        orElse: () => {});
+        orElse: () => <String, dynamic>{});
 
     if (!info.containsKey('code')) return UnknownCurrency(number.toString());
 
-    return Currency(info['code'], info['number'], info['digits']);
+    return Currency(
+      info['code'] as String,
+      info['number'] as int,
+      info['digits'] as int,
+    );
   }
 
   /// Dummy currency
@@ -122,6 +130,11 @@ class UnknownCurrency extends Currency {
   /// hashCode of an unknown currency is always `0`
   @override
   int get hashCode => 0;
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other);
+  }
 }
 
 /// Represents money
@@ -129,7 +142,7 @@ class UnknownCurrency extends Currency {
 /// Supports `+`, `-`, `/`, `*`, `%` and all comparison operators, but works only
 /// with instances of the same currency. See [CurrencyInfo] to exchange
 /// currencies by rate
-class Money implements Comparable {
+class Money implements Comparable<Money> {
   /// Constructs new money instance
   ///
   /// The money constructor is constant
@@ -172,8 +185,8 @@ class Money implements Comparable {
   @override
   String toString() =>
       '${toNumericString()} ' +
-      (fancyCurrencies && _CurrencyStyling.containsKey(currency.code)
-          ? _CurrencyStyling[currency.code]
+      (fancyCurrencies && _currencyStyling.containsKey(currency.code)
+          ? _currencyStyling[currency.code]!
           : currency.code);
 
   /// Returns `true` if the amount is `0`
@@ -184,7 +197,8 @@ class Money implements Comparable {
 
   /// Returns new Money instance of the same currency with
   /// absolute value of amount
-  factory Money.abs(target) => Money(target.amount.abs(), target.currency);
+  factory Money.abs(Money target) =>
+      Money(target.amount.abs(), target.currency);
 
   /// Converts double to integer which represents amount of the instance
   /// in the smallest unit of the currency
@@ -215,11 +229,8 @@ class Money implements Comparable {
 
   @override
   int compareTo(other) {
-    if (other is! Money) throw Exception('Money can be compared only to Money');
-    final second = other;
-
-    if (this > second) return 1;
-    if (this < second) return -1;
+    if (this > other) return 1;
+    if (this < other) return -1;
     return 0;
   }
 
@@ -327,9 +338,9 @@ class Money implements Comparable {
   ) {
     if (items.isEmpty) throw Exception('Minimal 1 item expected');
     var m = items[0];
-    items.forEach((e) {
+    for (final e in items) {
       if (e < m) m = e;
-    });
+    }
     return m;
   }
 
@@ -344,9 +355,9 @@ class Money implements Comparable {
   ) {
     if (items.isEmpty) throw Exception('Minimal 1 item expected');
     var m = items[0];
-    items.forEach((e) {
+    for (final e in items) {
       if (e > m) m = e;
-    });
+    }
     return m;
   }
 }

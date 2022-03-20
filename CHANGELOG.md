@@ -1,3 +1,6 @@
+## 1.4.5
+- Minor refactoring
+
 ## 1.4.4
 - Added support for new API fields
 

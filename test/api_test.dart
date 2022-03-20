@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 
 class EmptyApiResponse implements APIResponse {
   EmptyApiResponse()
-      : body = {},
+      : body = <String, dynamic>{},
         statusCode = 0,
         headers = {};
 
@@ -82,7 +82,7 @@ void main() {
     });
 
     test('APIRequest.clone basic test', () {
-      var request = APIRequest('test',
+      final request = APIRequest('test',
           methodId: 'test-class1',
           settings: APIFlags.skip,
           useAuth: true,
@@ -90,7 +90,7 @@ void main() {
           headers: {'Header': 'Value'},
           httpMethod: APIHttpMethod.POST);
 
-      var clone = APIRequest.clone(request);
+      final clone = APIRequest.clone(request);
       expect(clone.httpMethod, equals(request.httpMethod));
     });
   });
@@ -136,10 +136,10 @@ void main() {
       }));
     });
 
-    test('Initial request is being sent immediatelly', () {
+    test('Initial request is being sent immediately', () {
       api.call(APIRequest('test-method'));
       server?.listen(expectAsync1((request) async {
-        var received = DateTime.now();
+        final received = DateTime.now();
 
         request.response.write('{}');
         await request.response.close();
@@ -152,7 +152,7 @@ void main() {
     test('Methods can be busy', () {
       api.call(APIRequest('test-method', methodId: 'test-class1'));
       server?.listen(expectAsync1((request) async {
-        var business = api.isMethodBusy('test-class1');
+        final business = api.isMethodBusy('test-class1');
 
         request.response.write('{}');
         await request.response.close();
@@ -162,7 +162,7 @@ void main() {
     });
 
     test('Request time is being recorded', () {
-      var originalTime = api.lastRequest();
+      final originalTime = api.lastRequest();
       api.call(APIRequest('test-method'));
 
       server?.listen(expectAsync1((request) async {
@@ -186,7 +186,7 @@ void main() {
     });
 
     test('Request time for methodId is being recorded', () {
-      var originalTime = api.lastRequest(methodId: 'test-class1');
+      final originalTime = api.lastRequest(methodId: 'test-class1');
       api.call(APIRequest('test-method', methodId: 'test-class1'));
 
       server?.listen(expectAsync1((request) async {
@@ -198,11 +198,11 @@ void main() {
       }));
     });
 
-    group('Clonnig and Delivery', () {
+    group('Cloning and Delivery', () {
       var api = API(Uri());
       APIRequest originalAPIRequest, cloneAPIRequest;
       HttpRequest? originalRequest, cloneRequest;
-      var oDec, cDec;
+      late Map<String, dynamic> oDec, cDec;
 
       setUp(() async {
         api = API(url ?? Uri(), token: 'my-test-token');
@@ -219,10 +219,12 @@ void main() {
         server?.listen((request) async {
           if (originalRequest == null) {
             originalRequest = request;
-            oDec = jsonDecode(await utf8.decodeStream(originalRequest!));
+            oDec = jsonDecode(await utf8.decodeStream(originalRequest!))
+                as Map<String, dynamic>;
           } else {
             cloneRequest = request;
-            cDec = jsonDecode(await utf8.decodeStream(cloneRequest!));
+            cDec = jsonDecode(await utf8.decodeStream(cloneRequest!))
+                as Map<String, dynamic>;
           }
 
           request.response.write('{}');
@@ -271,8 +273,9 @@ void main() {
         });
 
         test('waiting', () {
-          var wait = api.getMethodRequestTimeout('test-class1').inMilliseconds;
-          var request = APIRequest('test-method',
+          final wait =
+              api.getMethodRequestTimeout('test-class1').inMilliseconds;
+          final request = APIRequest('test-method',
               settings: APIFlags.waiting, methodId: 'test-class1');
 
           DateTime? lastTime;
@@ -297,7 +300,7 @@ void main() {
         }, timeout: Timeout(Duration(seconds: 5)));
 
         test('waiting: method timeout is less than global', () {
-          var request = APIRequest('test-method',
+          final request = APIRequest('test-method',
               settings: APIFlags.waiting, methodId: 'test-class2');
 
           DateTime? lastTime;
@@ -324,7 +327,7 @@ void main() {
         }, timeout: Timeout(Duration(seconds: 5)));
 
         test('skip: Throws without agreeing for waiting', () {
-          var request = APIRequest('test-method', settings: APIFlags.skip);
+          final request = APIRequest('test-method', settings: APIFlags.skip);
 
           server?.listen(expectAsync1((request) async {
             request.response.write('{}');
@@ -340,7 +343,7 @@ void main() {
             return error;
           });
 
-          api.call(request).catchError((o) {
+          api.call(request).catchError((Object o) {
             cb(o);
             return EmptyApiResponse();
           });
@@ -348,8 +351,8 @@ void main() {
 
         test('skip | waiting: Works on no-throttling', () {
           api = API(url!);
-          var wait = Duration.zero.inMilliseconds;
-          var request = APIRequest('test-method',
+          final wait = Duration.zero.inMilliseconds;
+          final request = APIRequest('test-method',
               settings: APIFlags.skip | APIFlags.waiting,
               methodId: 'test-class1');
 
@@ -376,8 +379,8 @@ void main() {
 
         test('skipGlobal | waiting: Works on no-throttling', () {
           api = API(url!);
-          var wait = Duration.zero.inMilliseconds;
-          var request = APIRequest('test-method',
+          final wait = Duration.zero.inMilliseconds;
+          final request = APIRequest('test-method',
               settings: APIFlags.skipGlobal | APIFlags.waiting,
               methodId: 'test-class2');
 
@@ -403,7 +406,7 @@ void main() {
         });
 
         test('skipGlobal: Throws without agreeing for waiting', () {
-          var request =
+          final request =
               APIRequest('test-method', settings: APIFlags.skipGlobal);
 
           server!.listen(expectAsync1((request) async {
@@ -420,7 +423,7 @@ void main() {
             return error;
           });
 
-          api.call(request).catchError((o) {
+          api.call(request).catchError((Object o) {
             cb(o);
             return EmptyApiResponse();
           });
@@ -428,7 +431,7 @@ void main() {
 
         test('resend', () {
           var count = 0;
-          var request = APIRequest('test-method', settings: APIFlags.resend);
+          final request = APIRequest('test-method', settings: APIFlags.resend);
 
           server!.listen(expectAsync1((request) async {
             if (count == 0) {
@@ -444,9 +447,9 @@ void main() {
 
         test('resendOnFlood | waiting', () async {
           var count = 0;
-          var request1 = APIRequest('test-method',
+          final request1 = APIRequest('test-method',
               settings: APIFlags.resendOnFlood | APIFlags.waiting);
-          var request2 = APIRequest('test-method2');
+          final request2 = APIRequest('test-method2');
 
           server!.listen(expectAsync1((request) async {
             count++;
@@ -474,8 +477,8 @@ void main() {
         });
 
         test('skip | waiting', () {
-          var wait = api.globalTimeout.inMilliseconds;
-          var request = APIRequest('test-method',
+          final wait = api.globalTimeout.inMilliseconds;
+          final request = APIRequest('test-method',
               settings: APIFlags.skip | APIFlags.waiting,
               methodId: 'test-class1');
 
@@ -501,8 +504,8 @@ void main() {
         }, timeout: Timeout(Duration(seconds: 4)));
 
         test('skip | waiting: method delay is less than global timeout', () {
-          var wait = api.globalTimeout.inMilliseconds;
-          var request = APIRequest('test-method',
+          final wait = api.globalTimeout.inMilliseconds;
+          final request = APIRequest('test-method',
               settings: APIFlags.skip | APIFlags.waiting,
               methodId: 'test-class2');
 
@@ -528,8 +531,9 @@ void main() {
         }, timeout: Timeout(Duration(seconds: 3)));
 
         test('skipGlobal | waiting', () {
-          var wait = api.getMethodRequestTimeout('test-class1').inMilliseconds;
-          var request = APIRequest('test-method',
+          final wait =
+              api.getMethodRequestTimeout('test-class1').inMilliseconds;
+          final request = APIRequest('test-method',
               settings: APIFlags.skipGlobal | APIFlags.waiting,
               methodId: 'test-class1');
 
@@ -556,8 +560,9 @@ void main() {
 
         test('skipGlobal | waiting: method delay is less than global timeout',
             () {
-          var wait = api.getMethodRequestTimeout('test-class2').inMilliseconds;
-          var request = APIRequest('test-method',
+          final wait =
+              api.getMethodRequestTimeout('test-class2').inMilliseconds;
+          final request = APIRequest('test-method',
               settings: APIFlags.skipGlobal | APIFlags.waiting,
               methodId: 'test-class2');
 
@@ -583,7 +588,7 @@ void main() {
         }, timeout: Timeout(Duration(seconds: 3)));
 
         test('skip | skipGlobal | waiting: Throws illegal request error', () {
-          var request = APIRequest('test-method',
+          final request = APIRequest('test-method',
               settings: APIFlags.skip | APIFlags.skipGlobal | APIFlags.waiting);
 
           server!.listen(expectAsync1((request) async {
@@ -600,7 +605,7 @@ void main() {
             return error;
           });
 
-          api.call(request).catchError((o) {
+          api.call(request).catchError((Object o) {
             cb(o);
             return EmptyApiResponse();
           });
@@ -609,7 +614,7 @@ void main() {
         test('resendOnFlood | waiting: Correct wait times for global',
             () async {
           DateTime? last;
-          var request1 = APIRequest('test-method',
+          final request1 = APIRequest('test-method',
               settings: APIFlags.resendOnFlood | APIFlags.waiting);
 
           server!.listen(expectAsync1((request) async {
@@ -630,7 +635,7 @@ void main() {
         test('resendOnFlood | waiting: Correct wait times for method',
             () async {
           DateTime? last;
-          var request1 = APIRequest('test-method',
+          final request1 = APIRequest('test-method',
               settings: APIFlags.resendOnFlood | APIFlags.waiting,
               methodId: 'test-class1');
 
@@ -651,7 +656,7 @@ void main() {
 
         test('resend | waiting: Correct wait times for global', () async {
           DateTime? last;
-          var request1 = APIRequest('test-method',
+          final request1 = APIRequest('test-method',
               settings: APIFlags.resend | APIFlags.waiting);
 
           server!.listen(expectAsync1((request) async {
@@ -671,7 +676,7 @@ void main() {
 
         test('resend | waiting: Correct wait times for method', () async {
           DateTime? last;
-          var request1 = APIRequest('test-method',
+          final request1 = APIRequest('test-method',
               settings: APIFlags.resend | APIFlags.waiting,
               methodId: 'test-class1');
 

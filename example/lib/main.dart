@@ -8,20 +8,20 @@ import 'package:monobank_api/currency/extensions/currency_names.dart';
 
 void statement() async {
   // Create client
-  var client = MonoAPI('token');
+  final client = MonoAPI('token');
 
 // Request client
-  var res = await client.clientInfo();
+  final res = await client.clientInfo();
 
 // Get first account
-  var account = res.accounts[0];
+  final account = res.accounts[0];
 
   // Get statement list for last 3 months
-  var statement = account.statement(
+  final statement = account.statement(
       DateTime.now().subtract(Duration(days: 31 * 3)), DateTime.now());
 
 // For each statement item
-  await for (var item in statement.list(reverse: true)) {
+  await for (final item in statement.list(reverse: true)) {
     // Output string representation
     print('${item.mcc.emoji} $item (${item.operationAmount.currency.name})');
   }
@@ -38,7 +38,7 @@ void money() {
       Money(336, Currency.dummy));
 
   // Money implements Comparable
-  var m = [
+  final m = [
     Money(20, Currency.dummy),
     Money(-5, Currency.dummy),
     Money(3, Currency.dummy)
@@ -50,7 +50,7 @@ void money() {
   assert(m[2] == Money(20, Currency.dummy));
 
   // Convert currencies
-  var converter = CurrencyInfo(
+  final converter = CurrencyInfo(
     Currency.code('EUR'),
     Currency.code('USD'),
     1.165,
@@ -64,16 +64,17 @@ void money() {
 
 void currency() async {
   // Creating client
-  var client = MonoAnonymousAPI();
+  final client = MonoAnonymousAPI();
 
   // Getting currencies
-  var cur = await client.currency();
+  final cur = await client.currency();
 
   // Looking for RUB exchanger
-  var currencyInfo = cur.firstWhere((e) => e.currencyA == Currency.code('RUB'));
+  final currencyInfo =
+      cur.firstWhere((e) => e.currencyA == Currency.code('RUB'));
 
   // Exchanging 100 UAHs to RUB
-  var result = currencyInfo.exchange(Money(10000, Currency.code('UAH')));
+  final result = currencyInfo.exchange(Money(10000, Currency.code('UAH')));
 
   // Printing
   print(result);

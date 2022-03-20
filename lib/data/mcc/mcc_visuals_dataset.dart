@@ -4,6 +4,7 @@
 ///
 /// {@category Datasets}
 /// {@subCategory MCC}
+// ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
 library mcc__dataset;
 
 const Map<String, Map<String, String>> MCCVisualsDataset = {

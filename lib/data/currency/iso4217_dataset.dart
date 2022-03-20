@@ -4,6 +4,8 @@
 ///
 /// {@category Datasets}
 /// {@subCategory Currency}
+// ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
+
 library iso4217_dataset;
 
 const List<Map<String, dynamic>> Iso4217 = [

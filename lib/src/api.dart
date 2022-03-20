@@ -112,9 +112,11 @@ enum APIHttpMethod {
   /// Send as GET
   ///
   /// NOTICE: It doesn't support body
+  // ignore: constant_identifier_names
   GET,
 
   /// Send as POST
+  // ignore: constant_identifier_names
   POST
 }
 
@@ -263,6 +265,7 @@ class API {
     Map<String, Duration> requestTimeouts = const {},
     Uri? noAuthDomain,
   }) : noAuthDomain = noAuthDomain ?? domain {
+    // ignore: prefer_initializing_formals
     this.requestTimeouts = requestTimeouts;
   }
 
@@ -451,7 +454,7 @@ class API {
 
     Duration? minDelay;
 
-    for (var request in _cart.toList()) {
+    for (final request in _cart.toList()) {
       try {
         globalWait = willFreeIn();
         if (request.methodId != null) {
@@ -504,7 +507,7 @@ class API {
 
     try {
       request._isProcessingNeeded = false;
-      var inLine = (request.settings & APIFlags.skip == 0) &&
+      final inLine = (request.settings & APIFlags.skip == 0) &&
           (request.settings & APIFlags.skipGlobal == 0);
       _lastRequest = DateTime.now();
 
