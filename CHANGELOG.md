@@ -5,7 +5,7 @@
 #### Money library
 - `CurrencyInfo` now requires a date parameter for both its constructors
 
-### Mono library
+#### Mono library
 - `Client.id` and `Account.sendId` changed their types from `String` to `SendId`
 - `Cashback.type` and `Account.cashbackType` changed their types from `String` to `CashbackType`. 
   Arbitrary money cashback is not supported anymore.
