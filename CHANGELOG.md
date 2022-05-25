@@ -1,3 +1,27 @@
+## 2.0.0
+### Breaking Changes
+- Minimum Dart version is 2.17.0
+
+#### Money library
+- `CurrencyInfo` now requires a date parameter for both its constructors
+
+### Mono library
+- `Client.id` and `Account.sendId` changed their types from `String` to `SendId`
+- `Cashback.type` and `Account.cashbackType` changed their types from `String` to `CashbackType`. 
+  Arbitrary money cashback is not supported anymore.
+
+### What's New
+- Added support for card type 'eAid'
+- Added `toString()` implementations for `CardType`, `BankCard`, `Client`, `Account`
+- Fields `Client.id` and `Account.sendId` can now be used to generate `send.monobank.ua` links
+thanks to the new `SendId` type and its `SendId.url` getter
+- Support for getting `webhookUrl` under `Client` and setting one using `Client.setWebhook`
+- Permissions list of the current token with `Client.permissions`
+- Jars list of the current user with `Client.jars`
+- Access FOP invoice ID with 'StatementItem.invoiceId`
+- Parse webhook events with `WebhookEvent.fromJson`
+- Added `CurrencyInfo.date` property
+
 ## 1.4.5
 - Minor refactoring
 

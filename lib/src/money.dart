@@ -184,10 +184,7 @@ class Money implements Comparable<Money> {
   /// format `a.aa XXX`, where `XXX` is [Currency.code].
   @override
   String toString() =>
-      '${toNumericString()} ' +
-      (fancyCurrencies && _currencyStyling.containsKey(currency.code)
-          ? _currencyStyling[currency.code]!
-          : currency.code);
+      '${toNumericString()} ${fancyCurrencies && _currencyStyling.containsKey(currency.code) ? _currencyStyling[currency.code]! : currency.code}';
 
   /// Returns `true` if the amount is `0`
   bool get isZero => amount == 0;
@@ -392,8 +389,14 @@ class CurrencyInfo {
   /// Accepts two currencies, sell and buy rate of currency A relative to currency B
   ///
   /// Optionally you can specify rounding for the currency exchange
-  CurrencyInfo(this.currencyA, this.currencyB, this.rateSell, this.rateBuy,
-      {this.rounding = MoneyRounding.bank});
+  CurrencyInfo(
+    this.currencyA,
+    this.currencyB,
+    this.rateSell,
+    this.rateBuy,
+    this.date, {
+    this.rounding = MoneyRounding.bank,
+  });
 
   /// Currency to be sold or bought
   final Currency currencyA;
@@ -406,6 +409,9 @@ class CurrencyInfo {
 
   /// Rate which is being used when Currency A is being bought
   final double rateBuy;
+
+  /// Currency update date
+  final DateTime date;
 
   /// Used rounding mode for operations.
   ///
@@ -456,8 +462,18 @@ class CurrencyInfo {
 
   /// Shortcut to create conversion objects with same sell rate and currency rate
   factory CurrencyInfo.cross(
-          Currency currencyA, Currency currencyB, double rateCross,
-          {MoneyRounding rounding = MoneyRounding.bank}) =>
-      CurrencyInfo(currencyA, currencyB, rateCross, rateCross,
-          rounding: rounding);
+    Currency currencyA,
+    Currency currencyB,
+    double rateCross,
+    DateTime date, {
+    MoneyRounding rounding = MoneyRounding.bank,
+  }) =>
+      CurrencyInfo(
+        currencyA,
+        currencyB,
+        rateCross,
+        rateCross,
+        date,
+        rounding: rounding,
+      );
 }

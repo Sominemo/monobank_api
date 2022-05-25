@@ -56,8 +56,16 @@ enum CardType {
   /// Account of an individual entrepreneur
   fop,
 
+  /// "єПідтримка" card
+  ///
+  /// Account for aid money from the Ukrainian government
+  eAid,
+
   /// Unknown card
-  other
+  other;
+
+  @override
+  String toString() => name;
 }
 
 /// Representation of a bank card
@@ -96,9 +104,17 @@ class BankCard {
       case 'fop':
         return CardType.fop;
 
+      case 'eAid':
+        return CardType.eAid;
+
       default:
         return CardType.other;
     }
+  }
+
+  @override
+  String toString() {
+    return '$mask ($type)';
   }
 }
 
@@ -106,7 +122,18 @@ class BankCard {
 class Client {
   Client._fromJson(Map<String, dynamic> data, this.controller)
       : name = data['name'] as String,
-        id = data['clientId'] as String {
+        id = SendId(data['clientId'] as String, SendIdType.client),
+        _webHookUrl =
+            data['webHookUrl'] != null && (data['webHookUrl'] as String) != ''
+                ? (Uri.tryParse(data['webHookUrl'] as String))
+                : null,
+        permissions = ClientPermission.parse(data['permissions'] as String) {
+    jars.addAll(
+      (data['jars'] as List<dynamic>? ?? <dynamic>[]).map(
+        (dynamic e) => Jar._fromJson(e as Map<String, dynamic>, this),
+      ),
+    );
+
     final accountsData =
         List<Map<String, dynamic>>.from(data['accounts'] as Iterable<dynamic>);
 
@@ -117,7 +144,8 @@ class Client {
         CardType.black,
         CardType.white,
         CardType.yellow,
-        CardType.fop
+        CardType.fop,
+        CardType.eAid,
       ];
       const curOrder = ['UAH', 'USD', 'EUR', 'PLN'];
 
@@ -198,7 +226,45 @@ class Client {
   /// id of the client in monobank system
   ///
   /// Can be used for send.monobank.ua links
-  final String id;
+  final SendId id;
+
+  /// Webhook URL
+  ///
+  /// Identifies if a webhook was set. Is null, if it wasn't
+  Uri? get webHookUrl => _webHookUrl;
+
+  Uri? _webHookUrl;
+
+  /// Set new WebHook URL
+  ///
+  /// Throws [APIError] if it fails
+  Future<bool> setWebHook(Uri url) async {
+    await controller.call(
+      APIRequest(
+        'setWebHook',
+        methodId: 'setWebHook',
+        useAuth: true,
+        httpMethod: APIHttpMethod.POST,
+        data: {
+          'webHookUrl': url.toString(),
+        },
+      ),
+    );
+
+    _webHookUrl = url;
+
+    return true;
+  }
+
+  /// List of granted permissions
+  ///
+  /// See [ClientPermission]
+  final Set<ClientPermission> permissions;
+
+  /// List of jars in account
+  ///
+  /// See [Jar]
+  final List<Jar> jars = [];
 
   /// List of available accounts
   ///
@@ -215,6 +281,11 @@ class Client {
   /// Parent of the client
   final API controller;
 
+  @override
+  String toString() {
+    return '$name: ${id.id}';
+  }
+
   /// Controls account sorting
   ///
   /// See [accounts]
@@ -222,6 +293,182 @@ class Client {
   /// - `true`: enable sorting
   /// - `false`: disable sorting
   static bool sortAccounts = true;
+}
+
+/// Send ID
+///
+/// Identifies IDs that can be used to compose send.monobank.ua links
+/// and provides a composer for them
+class SendId {
+  /// Construct a Send ID
+  ///
+  /// Type can be either [SendIdType.client] or [SendIdType.jar], which impacts
+  /// the format of the link
+  SendId(this.id, this.type);
+
+  /// Url for the send.monobank.ua link
+  ///
+  /// Constructed from [id] and [type]
+  Uri get url => Uri(
+        scheme: 'https',
+        host: 'send.monobank.ua',
+        pathSegments: [
+          if (type == SendIdType.jar) 'jar',
+          id,
+        ],
+      );
+
+  /// Send ID of the client or jar
+  final String id;
+
+  /// Type of the ID
+  ///
+  /// See [SendIdType]
+  final SendIdType type;
+
+  @override
+  String toString() {
+    return url.toString();
+  }
+}
+
+/// Type of the Send ID
+///
+/// See [SendId]
+enum SendIdType {
+  /// The Send ID belongs to a personal account
+  client,
+
+  /// The Send ID is associated with a jar
+  jar,
+}
+
+/// Client Permissions
+///
+/// Types of permissions
+enum ClientPermission {
+  /// Can see personal account info
+  personalInfo('p'),
+
+  /// Can see statement
+  statement('s'),
+
+  /// Can have access to the FOP account
+  fop('f'),
+
+  /// Can see jar list
+  jars('j');
+
+  /// Compose a permission by its code
+  const ClientPermission(this.name);
+
+  /// Permission literal
+  final String name;
+
+  /// Parse a permission string
+  static Set<ClientPermission> parse(String str) {
+    final set = <ClientPermission>{};
+
+    for (final e in str.split('')) {
+      if (e == 'p') {
+        set.add(personalInfo);
+      } else if (e == 's') {
+        set.add(statement);
+      } else if (e == 'f') {
+        set.add(fop);
+      } else if (e == 'j') {
+        set.add(jars);
+      }
+    }
+
+    return set;
+  }
+}
+
+/// The jar
+///
+/// A jar is a personal account that can be used to save or collect money
+class Jar {
+  /// ID of the jar
+  final String id;
+
+  /// Send ID of the jar
+  ///
+  /// Can be used for send.monobank.ua links
+  final SendId sendId;
+
+  /// Name of the jar
+  final String title;
+
+  /// Description for the jar
+  final String description;
+
+  /// Balance of the jar
+  final Money balance;
+
+  /// Goal of the jar
+  final Money? goal;
+
+  /// Parent account
+  final Client client;
+
+  /// Check if the jar is full
+  ///
+  /// Returns `true` if the jar is full
+  ///
+  /// Always returns false is jar has no goal
+  bool get isFull => goal == null ? true : balance >= goal!;
+
+  @override
+  String toString() {
+    return '🍯 $title: $balance${goal == null ? '' : ' / $goal'}';
+  }
+
+  Jar._fromJson(Map<String, dynamic> data, this.client)
+      : id = data['id'] as String,
+        sendId = SendId(
+          (data['sendId'] as String).substring(4),
+          SendIdType.jar,
+        ),
+        title = data['title'] as String,
+        description = data['description'] as String,
+        balance = Money(
+          data['balance'] as int,
+          Currency.number(data['currencyCode'] as int),
+        ),
+        goal = data['goal'] == null
+            ? null
+            : Money(
+                data['goal'] as int,
+                Currency.number(data['currencyCode'] as int),
+              );
+}
+
+/// Cashback type
+enum CashbackType {
+  /// Cashback is not available
+  none,
+
+  /// Cashback is in Hryvnia
+  uah,
+
+  /// Cashback is in miles
+  miles,
+
+  /// Cashback is unknown
+  unknown;
+
+  static CashbackType fromString(String str) {
+    if (str == 'None' || str == '') {
+      return none;
+    } else if (str == 'UAH') {
+      return uah;
+    } else if (str == 'Miles') {
+      return miles;
+    } else {
+      return unknown;
+    }
+  }
 }
 
 /// Representation of cashback
@@ -232,7 +479,7 @@ class Cashback {
   final double amount;
 
   /// String representation of cashback type
-  final String type;
+  final CashbackType type;
 
   /// Related object to the Cashback
   ///
@@ -245,7 +492,7 @@ class Cashback {
 
 /// Account doesn't provide cashback
 class NoCashback extends Cashback {
-  NoCashback._() : super._(0, 'None');
+  NoCashback._() : super._(0, CashbackType.none);
   @override
   String toString() => '';
 }
@@ -253,7 +500,7 @@ class NoCashback extends Cashback {
 /// Account provides money-backed cashback
 class MoneyCashback extends Cashback {
   MoneyCashback._(int amount, this.currency)
-      : super._(amount.toDouble(), currency.code);
+      : super._(amount.toDouble(), CashbackType.uah);
 
   /// The currency of cashback
   Currency currency;
@@ -267,19 +514,23 @@ class MoneyCashback extends Cashback {
 
 /// Account provides miles cashback
 class MilesCashback extends Cashback {
-  MilesCashback._(int amount) : super._(amount / 100, 'Miles');
+  MilesCashback._(int amount) : super._(amount / 100, CashbackType.miles);
 
   @override
   String toString() => '✈ ${amount}mi';
 }
 
-Cashback _cashback(int amount, String type) {
-  final currency = Currency.code(type);
-  if (currency is! UnknownCurrency) return MoneyCashback._(amount, currency);
-
-  if (type == 'Miles') return MilesCashback._(amount);
-  if (type == 'None') return NoCashback._();
-  return Cashback._(amount.toDouble(), type);
+Cashback _cashback(int amount, CashbackType type) {
+  switch (type) {
+    case CashbackType.uah:
+      return MoneyCashback._(amount, Currency.number(980));
+    case CashbackType.miles:
+      return MilesCashback._(amount);
+    case CashbackType.none:
+      return NoCashback._();
+    default:
+      return Cashback._(amount.toDouble(), CashbackType.unknown);
+  }
 }
 
 /// Single item from statement
@@ -291,7 +542,13 @@ class StatementItem {
         description = data['description'] as String? ?? '',
         mcc = MCC(data['mcc'] as int),
         originalMcc = MCC(data['originalMcc'] as int),
-        amount = Money(data['amount'] as int, account.balance.currency),
+        amount = account.balance.currency == Currency.dummy &&
+                data['operationAmount'] as int == data['amount'] as int
+            ? Money(
+                data['operationAmount'] as int,
+                Currency.number(data['currencyCode'] as int),
+              )
+            : Money(data['amount'] as int, account.balance.currency),
         operationAmount = Money(
           data['operationAmount'] as int,
           Currency.number(data['currencyCode'] as int),
@@ -308,9 +565,10 @@ class StatementItem {
         ),
         comment = data['comment'] as String? ?? '',
         hold = data['hold'] as bool,
-        receiptId = data['receiptId'] as String,
-        counterEdrpou = data['counterEdrpou'] as String,
-        counterIban = data['counterIban'] as String;
+        receiptId = data['receiptId'] as String?,
+        invoiceId = data['invoiceId'] as String?,
+        counterEdrpou = data['counterEdrpou'] as String?,
+        counterIban = data['counterIban'] as String?;
 
   /// Parent account
   final Account account;
@@ -351,8 +609,11 @@ class StatementItem {
   /// Authorization hold
   final bool hold;
 
-  // Check number on check.gov.ua
+  // Check number for check.gov.ua
   final String? receiptId;
+
+  // Invoice number for FOP account transactions
+  final String? invoiceId;
 
   // Counteragent Edrpou number, is available only for accounts with `fop` type
   final String? counterEdrpou;
@@ -468,9 +729,11 @@ class Account {
             Currency.number(data['currencyCode'] as int)),
         creditLimit = Money(data['creditLimit'] as int,
             Currency.number(data['currencyCode'] as int)),
-        cashbackType = data['cashbackType'] as String,
+        cashbackType = CashbackType.fromString(data['cashbackType'] as String),
         iban = data['iban'] as String,
-        sendId = data['sendId'] as String,
+        sendId = data['sendId'] as String != ''
+            ? SendId(data['sendId'] as String, SendIdType.client)
+            : null,
         type = BankCard.cardTypeFromString(data['type'] as String),
         cards = List<String>.from(data['maskedPan'] as Iterable<dynamic>)
             .map((e) => BankCard._(
@@ -484,6 +747,11 @@ class Account {
   /// Actually can be used for getting statement only
   final String id;
 
+  /// Account Send ID
+  ///
+  /// Can be used to generate send.monobank.ua links
+  final SendId? sendId;
+
   /// Parent
   final Client client;
 
@@ -494,13 +762,10 @@ class Account {
   final Money creditLimit;
 
   /// Cashback type
-  final String cashbackType;
+  final CashbackType cashbackType;
 
   /// IBAN
   final String iban;
-
-  /// ID for send.monobank.ua/XXXX links
-  final String sendId;
 
   /// List of related cards
   final List<BankCard> cards;
@@ -534,6 +799,163 @@ class Account {
   /// See [Statement]
   Statement statement(DateTime from, DateTime to) =>
       Statement._(this, from, to);
+
+  @override
+  String toString() {
+    return '$id: $balance';
+  }
+}
+
+/// Interface for webhook event types
+///
+/// See the only available type [StatementItemWebhookEvent]
+class WebhookEvent {
+  /// Parse an event from JSON
+  ///
+  /// Throws [WebhookEventParseException] if parsing fails
+  factory WebhookEvent.fromJson(Map<String, dynamic> data) {
+    switch (data['type'] as String) {
+      case 'StatementItem':
+        return StatementItemWebhookEvent._fromJson(data);
+      default:
+        throw Exception('Unknown webhook event type: ${data['type']}');
+    }
+  }
+}
+
+/// Transaction webhook event
+class StatementItemWebhookEvent implements WebhookEvent {
+  /// Account referenced in the webhook event.
+  ///
+  /// Despite the fact [LazyAccount] implements [Account], most of getters are
+  /// stubs. See [LazyAccount] for details. To get actual account data, use
+  /// [LazyAccount.resolve].
+  final LazyAccount account;
+
+  /// Statement item referenced in the webhook event.
+  ///
+  /// Almost full data is available, but not all of it, particularly, things like
+  /// cashback type and other data that's not available in the Statement Item
+  /// object in API and is usually delivered from the [Account] object by
+  /// [StatementItem]'s internal logic.
+  ///
+  /// If you want to access proper data, call [LazyAccount.resolve] on
+  /// [account] and then use [LazyStatementItem.regenerate].
+  late final LazyStatementItem item;
+
+  StatementItemWebhookEvent._fromJson(Map<String, dynamic> data)
+      : account = LazyAccount(
+          (data['data'] as Map<String, dynamic>)['account'] as String,
+        ) {
+    item = LazyStatementItem._fromJson(
+      (data['data'] as Map<String, dynamic>)['statementItem']
+          as Map<String, dynamic>,
+      account,
+    );
+  }
+}
+
+/// Represents an unresolved account
+///
+/// Use [resolve] method to get resolved account
+///
+/// All implemented properties are stubs, except [id] - which contains an actual
+/// ID, and [client] - which throws exception if not resolved.
+class LazyAccount implements Account {
+  @override
+  final String id;
+
+  /// Create an unresolved account
+  ///
+  /// You can use this constructor to create unresolved account.
+  LazyAccount(this.id);
+
+  /// Resolve account
+  ///
+  /// Returns resolved account or null if account is not found. Current instance
+  /// turns into a proxy for the resolved instance.
+  ///
+  /// You need to provide [client] with [PersonalMethods] mixin support
+  /// (e.g. [MonoAPI] to resolve account.
+  Future<Account?> resolve(PersonalMethods client) async {
+    final e = await client.clientInfo();
+
+    for (final a in e.accounts) {
+      if (a.id == id) {
+        originalAccount = a;
+        return a;
+      }
+    }
+
+    return null;
+  }
+
+  /// Resolved instance of account
+  ///
+  /// See [resolve]
+  Account? originalAccount;
+
+  @override
+  Money get accountBalance =>
+      originalAccount?.accountBalance ?? Money(0, Currency.dummy);
+
+  @override
+  Money get balance => originalAccount?.balance ?? Money(0, Currency.dummy);
+
+  @override
+  List<BankCard> get cards => originalAccount?.cards ?? [];
+
+  @override
+  CashbackType get cashbackType =>
+      originalAccount?.cashbackType ?? CashbackType.unknown;
+
+  @override
+  Client get client => originalAccount?.client ?? (throw UnimplementedError());
+
+  @override
+  Money get creditLimit =>
+      originalAccount?.creditLimit ?? Money(0, Currency.dummy);
+
+  @override
+  String get iban => originalAccount?.iban ?? '';
+
+  @override
+  bool get isCreditUsed => originalAccount?.isCreditUsed ?? false;
+
+  @override
+  bool get isOverdraft => originalAccount?.isOverdraft ?? false;
+
+  @override
+  Money get pureBalance =>
+      originalAccount?.pureBalance ?? Money(0, Currency.dummy);
+
+  @override
+  SendId? get sendId => originalAccount?.sendId;
+
+  @override
+  Statement statement(DateTime from, DateTime to) =>
+      originalAccount?.statement(from, to) ?? Statement._(this, from, to);
+
+  @override
+  CardType get type => originalAccount?.type ?? CardType.other;
+}
+
+/// Represents a lazy statement item
+///
+/// The difference between this class and [StatementItem] is that this class
+/// stores the raw data used to generate the instance, so you can regenerate
+/// it any time if the [account] state changes.
+///
+/// This class is mainly designed to work in pair with [LazyAccount] class.
+class LazyStatementItem extends StatementItem {
+  final Map<String, dynamic> _data;
+
+  /// Regenerate the instance from raw data. This method is called when
+  /// the [account] state changes. For example. when you call [LazyAccount.resolve].
+  StatementItem regenerate() => StatementItem._fromJson(_data, account);
+
+  LazyStatementItem._fromJson(this._data, Account account)
+      : super._fromJson(_data, account);
 }
 
 /// Enable personal/* methods
@@ -569,11 +991,17 @@ mixin CurrencyMethods on API {
           Currency.number(e['currencyCodeA'] as int),
           Currency.number(e['currencyCodeB'] as int),
           double.parse(
-              (e.containsKey('rateCross') ? e['rateCross'] : e['rateSell'])
-                  .toString()),
+            (e.containsKey('rateCross') ? e['rateCross'] : e['rateSell'])
+                .toString(),
+          ),
           double.parse(
-              (e.containsKey('rateCross') ? e['rateCross'] : e['rateBuy'])
-                  .toString()),
+            (e.containsKey('rateCross') ? e['rateCross'] : e['rateBuy'])
+                .toString(),
+          ),
+          DateTime.fromMillisecondsSinceEpoch(
+            (e['date'] as int) * 1000,
+            isUtc: true,
+          ),
         ));
   }
 }

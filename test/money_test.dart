@@ -224,73 +224,84 @@ void main() {
     test('Construct', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5, 1.6, rounding: MoneyRounding.math);
+      final i = CurrencyInfo(c1, c2, 1.5, 1.6, DateTime.now(),
+          rounding: MoneyRounding.math);
       expect(i.rateBuy, 1.6);
     });
     test('isCross', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5, 1.5, rounding: MoneyRounding.math);
+      final i = CurrencyInfo(c1, c2, 1.5, 1.5, DateTime.now(),
+          rounding: MoneyRounding.math);
       expect(i.isCross, true);
     });
     test('!isCross', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5, 1.6, rounding: MoneyRounding.math);
+      final i = CurrencyInfo(c1, c2, 1.5, 1.6, DateTime.now(),
+          rounding: MoneyRounding.math);
       expect(i.isCross, false);
     });
     test('!Currency.cross', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo.cross(c1, c2, 1.5, rounding: MoneyRounding.math);
+      final i = CurrencyInfo.cross(c1, c2, 1.5, DateTime.now(),
+          rounding: MoneyRounding.math);
       expect(i.rateSell, i.rateBuy);
     });
     test('Exchange 1.5 sell math', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5, 1.6, rounding: MoneyRounding.math);
+      final i = CurrencyInfo(c1, c2, 1.5, 1.6, DateTime.now(),
+          rounding: MoneyRounding.math);
       final r = i.exchange(Money(2, c1));
       expect(r, Money(3, c2));
     });
     test('Exchange 1.5 buy math', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.6, 1.5, rounding: MoneyRounding.math);
+      final i = CurrencyInfo(c1, c2, 1.6, 1.5, DateTime.now(),
+          rounding: MoneyRounding.math);
       final r = i.exchange(Money(3, c2));
       expect(r, Money(2, c1));
     });
     test('Exchange 234 -> 1.5694 math', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5694, 2, rounding: MoneyRounding.math);
+      final i = CurrencyInfo(c1, c2, 1.5694, 2, DateTime.now(),
+          rounding: MoneyRounding.math);
       final r = i.exchange(Money(234, c1));
       expect(r, Money(367, c2));
     });
     test('Exchange 235 -> 1.5694 math', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5694, 2, rounding: MoneyRounding.math);
+      final i = CurrencyInfo(c1, c2, 1.5694, 2, DateTime.now(),
+          rounding: MoneyRounding.math);
       final r = i.exchange(Money(235, c1));
       expect(r, Money(369, c2));
     });
     test('Exchange 235 -> 1.5694 floor', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5694, 2, rounding: MoneyRounding.floor);
+      final i = CurrencyInfo(c1, c2, 1.5694, 2, DateTime.now(),
+          rounding: MoneyRounding.floor);
       final r = i.exchange(Money(235, c1));
       expect(r, Money(368, c2));
     });
     test('Exchange 235 -> 1.5694 bank', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5694, 2, rounding: MoneyRounding.bank);
+      final i = CurrencyInfo(c1, c2, 1.5694, 2, DateTime.now(),
+          rounding: MoneyRounding.bank);
       final r = i.exchange(Money(235, c1));
       expect(r, Money(368, c2));
     });
     test('Exchange 2365 -> 1.5709 bank', () {
       final c1 = Currency('XXX', 999, 2);
       final c2 = Currency('AAA', 000, 2);
-      final i = CurrencyInfo(c1, c2, 1.5709, 2, rounding: MoneyRounding.bank);
+      final i = CurrencyInfo(c1, c2, 1.5709, 2, DateTime.now(),
+          rounding: MoneyRounding.bank);
       final r = i.exchange(Money(235, c1));
       expect(r, Money(370, c2));
     });
