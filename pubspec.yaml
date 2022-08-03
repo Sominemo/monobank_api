@@ -4,8 +4,8 @@ description: >
 
   Supports getting currencies and grabbing statement
 
-version: 2.0.0
-homepage: https://github.com/Sominemo/monobank_api
+version: 2.0.1
+repository: https://github.com/Sominemo/monobank_api
 
 environment:
   sdk: ">=2.17.0 <3.0.0"

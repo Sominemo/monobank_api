@@ -458,8 +458,8 @@ enum CashbackType {
   /// Cashback is unknown
   unknown;
 
-  static CashbackType fromString(String str) {
-    if (str == 'None' || str == '') {
+  static CashbackType fromString(String? str) {
+    if (str == 'None' || str == '' || str == null) {
       return none;
     } else if (str == 'UAH') {
       return uah;
@@ -729,7 +729,7 @@ class Account {
             Currency.number(data['currencyCode'] as int)),
         creditLimit = Money(data['creditLimit'] as int,
             Currency.number(data['currencyCode'] as int)),
-        cashbackType = CashbackType.fromString(data['cashbackType'] as String),
+        cashbackType = CashbackType.fromString(data['cashbackType'] as String?),
         iban = data['iban'] as String,
         sendId = data['sendId'] as String != ''
             ? SendId(data['sendId'] as String, SendIdType.client)
