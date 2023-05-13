@@ -7,6 +7,7 @@
 // ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
 library currency_countries_dataset;
 
+/// Country codes dataset
 const Map<String, List<String>> Iso4217Countries = {
   '8': ['Albania'],
   '12': ['Algeria'],

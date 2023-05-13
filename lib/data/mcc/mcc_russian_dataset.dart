@@ -7,6 +7,7 @@
 // ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
 library mcc_russian_dataset;
 
+/// MCC Russian dataset
 const Map<String, String> MCCRussianDataset = {
   '1520': 'Строительство. Подрядчики',
   '1711': 'Кондиционеры. Установка',

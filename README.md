@@ -24,9 +24,3 @@ void main() async {
 ```
 
 See other examples in Example.
-
-## Features and bugs
-
-Please file feature requests and bugs at the [issue tracker][tracker].
-
-[tracker]: https://github.com/Sominemo/monobank_api/issues

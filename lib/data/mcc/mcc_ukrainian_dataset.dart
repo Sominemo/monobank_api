@@ -7,6 +7,7 @@
 // ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
 library mcc_ukrainian_dataset;
 
+/// MCC Ukrainian dataset
 const Map<String, String> MCCUkrainianDataset = {
   '1520': 'Будівництво. Підрядники',
   '1711': 'Кондиціонери. Встановлення',

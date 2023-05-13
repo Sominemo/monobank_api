@@ -7,6 +7,7 @@
 // ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
 library currency_names_dataset;
 
+/// Currency codes dataset
 const Map<String, String> Iso4217Names = {
   '8': 'Lek',
   '12': 'Algerian Dinar',

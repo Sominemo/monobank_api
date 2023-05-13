@@ -7,6 +7,7 @@
 // ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
 library mcc__dataset;
 
+/// MCC visuals dataset
 const Map<String, Map<String, String>> MCCVisualsDataset = {
   '🐕': {'icon': 'pets', 'color': '#ff9800'},
   '🐶': {'icon': 'pets', 'color': '#ff9800'},

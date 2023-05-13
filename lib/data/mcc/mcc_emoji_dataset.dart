@@ -7,6 +7,7 @@
 // ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
 library mcc_emoji_dataset;
 
+/// MCC emoji dataset
 const Map<String, List<int>> MCCEmojiDataset = {
   '\uD83D\uDC15': [742, 5995],
   '\uD83D\uDE9C': [763],

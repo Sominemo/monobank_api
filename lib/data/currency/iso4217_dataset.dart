@@ -8,6 +8,7 @@
 
 library iso4217_dataset;
 
+/// Currency info dataset
 const List<Map<String, dynamic>> Iso4217 = [
   {'code': 'AED', 'number': 784, 'digits': 2},
   {'code': 'AFN', 'number': 971, 'digits': 2},

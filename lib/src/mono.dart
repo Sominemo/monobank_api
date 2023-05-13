@@ -458,6 +458,7 @@ enum CashbackType {
   /// Cashback is unknown
   unknown;
 
+  /// Parse a string to [CashbackType]
   static CashbackType fromString(String? str) {
     if (str == 'None' || str == '' || str == null) {
       return none;
@@ -568,7 +569,8 @@ class StatementItem {
         receiptId = data['receiptId'] as String?,
         invoiceId = data['invoiceId'] as String?,
         counterEdrpou = data['counterEdrpou'] as String?,
-        counterIban = data['counterIban'] as String?;
+        counterIban = data['counterIban'] as String?,
+        counterName = data['counterName'] as String?;
 
   /// Parent account
   final Account account;
@@ -609,17 +611,20 @@ class StatementItem {
   /// Authorization hold
   final bool hold;
 
-  // Check number for check.gov.ua
+  /// Check number for check.gov.ua
   final String? receiptId;
 
-  // Invoice number for FOP account transactions
+  /// Invoice number for FOP account transactions
   final String? invoiceId;
 
-  // Counteragent Edrpou number, is available only for accounts with `fop` type
+  /// Counteragent Edrpou number, is available only for accounts with `fop` type
   final String? counterEdrpou;
 
-  // Counteragent Iban number, is available only for accounts with `fop` type
+  /// Counteragent Iban number, is available only for accounts with `fop` type
   final String? counterIban;
+
+  /// Counteragent name, is available only for accounts with `fop` type
+  final String? counterName;
 
   /// Returns true if operation is outgoing
   bool get isOut => amount.isNegative;

@@ -7,6 +7,7 @@
 // ignore_for_file: constant_identifier_names, implicit_dynamic_map_literal
 library mcc_english_dataset;
 
+/// MCC English info dataset
 const Map<String, String> MCCEnglishDataset = {
   '1520': 'General Contractors',
   '1711': 'Heating, Plumbing, A/C',
