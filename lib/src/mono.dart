@@ -436,7 +436,7 @@ class Jar {
   Jar._fromJson(Map<String, dynamic> data, this.client)
       : id = data['id'] as String,
         sendId = SendId(
-          (data['sendId'] as String).substring(4),
+          (data['sendId'] as String? ?? '').replaceFirst('jar/', ''),
           SendIdType.jar,
         ),
         title = data['title'] as String,
