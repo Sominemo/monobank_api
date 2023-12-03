@@ -1,3 +1,8 @@
+## 2.0.3
+
+-   Added rebuilding card type
+-   More careful sendId parsing to avoid exceptions
+
 ## 2.0.2
 
 -   Added support for `counterName` field in `StatementItem`
