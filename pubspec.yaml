@@ -4,7 +4,7 @@ description: >
 
     Supports getting currencies and statement info, includes currency and MCC datasets
 
-version: 2.0.2
+version: 2.0.3
 repository: https://github.com/Sominemo/monobank_api
 issue_tracker: https://github.com/Sominemo/monobank_api/issues
 
