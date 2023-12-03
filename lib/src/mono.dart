@@ -61,6 +61,11 @@ enum CardType {
   /// Account for aid money from the Ukrainian government
   eAid,
 
+  /// "єВідновлення" card
+  ///
+  /// Account for war time aid money from the Ukrainian government
+  rebuilding,
+
   /// Unknown card
   other;
 
@@ -107,6 +112,9 @@ class BankCard {
       case 'eAid':
         return CardType.eAid;
 
+      case 'rebuilding':
+        return CardType.rebuilding;
+
       default:
         return CardType.other;
     }
@@ -146,6 +154,7 @@ class Client {
         CardType.yellow,
         CardType.fop,
         CardType.eAid,
+        CardType.rebuilding,
       ];
       const curOrder = ['UAH', 'USD', 'EUR', 'PLN'];
 
