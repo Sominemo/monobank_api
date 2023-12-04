@@ -1,3 +1,7 @@
+## 2.1.0
+
+-   Bump http to 1.1.x
+
 ## 2.0.3
 
 -   Added rebuilding card type
