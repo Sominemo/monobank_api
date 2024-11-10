@@ -1,3 +1,61 @@
+## 3.0.0
+
+### Breaking Changes
+
+-   All mentions of `Account` in statement-related classes were replaced
+    with `StatementSource`
+-   `BankCard.type` and `Account.type` are now a `CardTypeClass`
+    instance instead of a `CardType` enum
+-   In `Statement.list`, `reverse` parameter was renamed to `isReverseChronological`
+    and now defaults to `true`
+-   In `Statement.list`, `ignoreErrors` parameter was removed
+-   The statement stream may now include service messages, notifying about possible
+    discrepancies in the data. Right now such messages may be yielded when response length
+    equals `maxPossibleItems` and the requested time range can't be smaller. This means
+    some data might get truncated in the requested time range. You can check for
+    service messages using `StatementItem.isServiceMessage`. You can also
+    set `ignoreServiceMessages` to `true`.
+-   `CashbackType.toString` now returns the same kind of string as API returns
+    instead of enum name
+-   `LazyAccount` was replaced with `LazyStatementSource`, the class was completely
+    removed. The change also impacts `LazyStatementItem` class. You can cast the
+    result of the `LazyStatementSource.resolve` method to `Account` or `Jar` to
+    get specific fields.
+
+### What's New
+
+-   `Account` and `Jar` are now subclasses of `StatementSource`,
+    this allows to fetch statements from jars too now using `StatementSource.statement`
+-   Added support for `madeInUkraine` card type
+-   Added access to raw card type string in `BankCard.type.raw`
+-   Exposed `lastRequestsTimes` and `globalLastRequestTime` in API class
+    to allow for state restoration and notifying the user about rate limits
+-   Added fields and data types related to service messages in statement items
+-   Added `AbortController` class to API to allow for cancelling requests.
+    If the request is still in the cart, it will not be sent to the server
+    when its turn comes. `APIError` with code 3 will be thrown as a response.
+-   Added support for `AbortController` in `APIRequest`
+-   Added `abortController` argument to `Statement.list`
+-   Added methods `BankCard.isMastercard` and `BankCard.isVisa`
+-   Made most of constructors in mono library public, including `fromJSON`,
+    to support persistence
+-   Added `toJSON()` methods to many classes in mono library for persistence
+    support
+-   `APIError` now has a new type - `isCancelled`, triggered when the request
+    was cancelled using `AbortController`
+-   Added `Cashback.fromType` factory
+-   Added `StatementItemServiceMessageCode` enum to distinguish between different
+    service message types
+
+### What's Changed
+
+-   Rewritten `Statement.list` to handle cases when more than maxPossibleItems
+    are returned by the API
+-   `Statement.maxRequestRange` is now set to 31 days and 1 hour instead of 31 days
+-   Made `Statement.maxRequestRange` and `Statement.maxPossibleItems`
+    modifiable
+-   `API.globalTimeout` is not final anymore
+
 ## 2.1.0
 
 -   Bump http to 1.1.x

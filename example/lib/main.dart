@@ -7,22 +7,35 @@ import 'package:monobank_api/mcc/extensions/mcc_emoji.dart';
 // Connecting names dataset for Currency
 import 'package:monobank_api/currency/extensions/currency_names.dart';
 
-void statement() async {
+// Get client statement for last 3 months from the first account
+void main() async {
   // Create client
-  final client = MonoAPI('token');
+  final mono = MonoAPI('token');
 
   // Request client
-  final res = await client.clientInfo();
+  final client = await mono.clientInfo();
 
-  // Get first account
-  final account = res.accounts[0];
+  // List accounts and cards
+  for (final account in client.accounts) {
+    print('$account');
+    for (final card in account.cards) {
+      print('  $card');
+    }
+  }
+
+  // List jars
+  for (final jar in client.jars) {
+    print('$jar');
+  }
 
   // Get statement list for last 3 months
-  final statement = account.statement(
-      DateTime.now().subtract(Duration(days: 31 * 3)), DateTime.now());
+  final statement = client.accounts[0].statement(
+    DateTime.now().subtract(Duration(days: 31 * 3)),
+    DateTime.now(),
+  );
 
   // For each statement item
-  await for (final item in statement.list(reverse: true)) {
+  await for (final item in statement.list(isReverseChronological: true)) {
     // Output string representation
     print('${item.mcc.emoji} $item (${item.operationAmount.currency.name})');
   }

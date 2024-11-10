@@ -14,9 +14,11 @@ void main() async {
   var res = await client.clientInfo();
   var account = res.accounts[0];
   var statement = account.statement(
-      DateTime.now().subtract(Duration(days: 31)), DateTime.now());
+    DateTime.now().subtract(Duration(days: 31)), 
+    DateTime.now(),
+  );
 
-  await for (var item in statement.list(reverse: true)) {
+  await for (var item in statement.list(isReverseChronological: true)) {
     print('$item');
   }
 }

@@ -59,6 +59,11 @@ class APIError {
   /// mutually-incompatible flags or passing invalid parameters
   bool get isIllegalRequestError => type == APIErrorType.local && data == 2;
 
+  /// Checks if the request was cancelled by the user
+  ///
+  /// This means the request was cancelled by the user using [AbortController.cancel]
+  bool get isCancelled => type == APIErrorType.local && data == 3;
+
   /// Generates token error
   ///
   /// Specifies behavior of the library when [APIRequest.useAuth] == true is being used on
@@ -146,9 +151,11 @@ class APIRequest {
     /// ```
     Map<String, String> headers = const {},
     this.httpMethod = APIHttpMethod.GET,
+    AbortController? abortController,
   })  : _completer = Completer(),
         data = Map.from(data),
         headers = Map.from(headers),
+        abortController = abortController ?? AbortController(),
         _originalData = data,
         _originalHeaders = headers;
 
@@ -196,6 +203,11 @@ class APIRequest {
   /// See [APIHttpMethod]
   final APIHttpMethod httpMethod;
 
+  /// Abort controller
+  ///
+  /// See [AbortController]
+  final AbortController abortController;
+
   final Completer<APIResponse> _completer;
   bool _isProcessingNeeded = true;
 
@@ -215,14 +227,16 @@ class APIRequest {
   /// pending result).
   ///
   /// If you use the same [APIRequest] instance with different
-  /// [API] instances behavior is unspecified
-  factory APIRequest.clone(APIRequest request) => APIRequest(request.method,
-      methodId: request.methodId,
-      data: request._originalData,
-      headers: request._originalHeaders,
-      httpMethod: request.httpMethod,
-      settings: request.settings,
-      useAuth: request.useAuth);
+  /// [API] instances, behavior is undefined
+  factory APIRequest.clone(APIRequest request) => APIRequest(
+        request.method,
+        methodId: request.methodId,
+        data: request._originalData,
+        headers: request._originalHeaders,
+        httpMethod: request.httpMethod,
+        settings: request.settings,
+        useAuth: request.useAuth,
+      );
 }
 
 /// Response given by calling on [APIRequest]
@@ -295,13 +309,35 @@ class API {
   ///
   /// At least this amount of time should pass before next request
   /// will be sent
-  final Duration globalTimeout;
+  Duration globalTimeout;
 
   final Set<APIRequest> _cart = {};
-  final Map<String, DateTime> _lastRequests = {};
+
+  /// A map of last time a request was sent by methodId
+  ///
+  /// A map, where keys are [APIRequest.methodId] and values are [DateTime]
+  /// of when the request was received by the server.
+  ///
+  /// This field is being used to throttle requests of the same class to
+  /// follow the rules specified in [API.requestTimeouts].
+  ///
+  /// It is exposed publicly to allow you to save and restore the state
+  /// of the API instance.
+  ///
+  /// See also: [globalLastRequestTime]
+  final Map<String, DateTime> lastRequestsTimes = {};
   final Map<String, bool> _methodBusy = {};
 
-  DateTime _lastRequest = DateTime.fromMillisecondsSinceEpoch(0);
+  /// Last time any kind of request was sent
+  ///
+  /// This field is being used to throttle requests to follow the rules
+  /// specified in [API.globalTimeout].
+  ///
+  /// It is exposed publicly to allow you to save and restore the state
+  /// of the API instance.
+  ///
+  /// See also: [lastRequestsTimes]
+  DateTime globalLastRequestTime = DateTime.fromMillisecondsSinceEpoch(0);
   bool _cartBusy = false;
 
   /// Minimal timeout between requests of the same class
@@ -340,8 +376,8 @@ class API {
   ///
   /// Returns `DateTime.fromMillisecondsSinceEpoch(0)` if never was sent
   DateTime lastRequest({String? methodId}) => methodId == null
-      ? _lastRequest
-      : (_lastRequests[methodId] ?? DateTime.fromMillisecondsSinceEpoch(0));
+      ? globalLastRequestTime
+      : (lastRequestsTimes[methodId] ?? DateTime.fromMillisecondsSinceEpoch(0));
 
   /// Returns minimum required time until request \[of class\] can be sent
   ///
@@ -351,7 +387,7 @@ class API {
   /// **minimum** required time, not the actual one
   Duration willFreeIn({String? methodId}) {
     // Time since last request
-    final timePassed = DateTime.now().difference(_lastRequest);
+    final timePassed = DateTime.now().difference(globalLastRequestTime);
 
     // Return delay caused by global timer
     // if not enough time has passed yet
@@ -507,12 +543,17 @@ class API {
 
     try {
       request._isProcessingNeeded = false;
+
+      if (request.abortController.isCancelled) {
+        throw APIError(3);
+      }
+
       final inLine = (request.settings & APIFlags.skip == 0) &&
           (request.settings & APIFlags.skipGlobal == 0);
-      _lastRequest = DateTime.now();
+      globalLastRequestTime = DateTime.now();
 
       if (methodId != null) {
-        _lastRequests[methodId] = DateTime.now();
+        lastRequestsTimes[methodId] = DateTime.now();
         if (inLine) {
           _methodBusy[methodId] = true;
         }
@@ -527,7 +568,7 @@ class API {
 
       if (request.httpMethod == APIHttpMethod.POST) {
         response = await http.post(requestUrl,
-            body: jsonEncode(request.data), headers: request.headers);
+            body: json.encode(request.data), headers: request.headers);
       } else if (request.httpMethod == APIHttpMethod.GET) {
         response = await http.get(requestUrl, headers: request.headers);
       } else {
@@ -543,16 +584,16 @@ class API {
           json.decode(response.body), response.statusCode, response.headers);
 
       final stamp = DateTime.now();
-      _lastRequest = stamp;
-      if (methodId != null) _lastRequests[methodId] = stamp;
+      globalLastRequestTime = stamp;
+      if (methodId != null) lastRequestsTimes[methodId] = stamp;
 
       if (inLine) {
         if (methodId != null) _methodBusy[methodId] = false;
       }
       request._completer.complete(resolver);
     } on APIError catch (e) {
-      _lastRequest = beforeSentTime;
-      if (methodId != null) _lastRequests[methodId] = beforeSentMethodTime;
+      globalLastRequestTime = beforeSentTime;
+      if (methodId != null) lastRequestsTimes[methodId] = beforeSentMethodTime;
 
       if ((e.isFloodError && request.settings & APIFlags.resendOnFlood > 0) ||
           request.settings & APIFlags.resend > 0) {
@@ -561,8 +602,8 @@ class API {
         request._completer.completeError(e);
       }
     } catch (e) {
-      _lastRequest = beforeSentTime;
-      if (methodId != null) _lastRequests[methodId] = beforeSentMethodTime;
+      globalLastRequestTime = beforeSentTime;
+      if (methodId != null) lastRequestsTimes[methodId] = beforeSentMethodTime;
 
       request._completer.completeError(e);
       rethrow;
@@ -584,4 +625,46 @@ class API {
     request.headers.putIfAbsent('Content-Type', () => 'application/json');
     request.headers.putIfAbsent('Accept', () => 'application/json');
   }
+}
+
+/// Abort controller
+///
+/// Allows to cancel the request.
+///
+/// Call [AbortController.cancel] to cancel the request.
+class AbortController {
+  /// Create a new controller
+  AbortController() : _isCancelled = false;
+
+  /// Create a new controller and cancel it immediately
+  AbortController.cancelled() : _isCancelled = true;
+
+  bool _isCancelled;
+
+  /// Cancel the request
+  ///
+  /// This will call all listeners that were added to the controller
+  void cancel() {
+    _isCancelled = true;
+
+    for (final listener in _listeners) {
+      listener?.call();
+    }
+    _listeners.clear();
+  }
+
+  /// Check if the request is cancelled
+  bool get isCancelled => _isCancelled;
+
+  /// Add a listener to the controller
+  ///
+  /// Returns a function that removes the listener. The listener is
+  /// called when the request is cancelled
+  void Function() addListener(dynamic Function() callback) {
+    _listeners.add(callback);
+    final id = _listeners.length - 1;
+    return () => _listeners[id] = null;
+  }
+
+  final List<dynamic Function()?> _listeners = [];
 }

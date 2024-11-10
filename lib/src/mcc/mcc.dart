@@ -22,7 +22,7 @@ class MCC {
   ///
   /// Only MCC objects are allowed to be compared
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (other is! MCC) return false;
     return code == other.code;
   }

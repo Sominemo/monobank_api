@@ -104,7 +104,7 @@ class Currency {
   /// Use [Currency.dummy] for money manipulations which don't
   /// involve currency
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! Currency) return false;
     if (this is UnknownCurrency || other is UnknownCurrency) return false;
@@ -132,7 +132,7 @@ class UnknownCurrency extends Currency {
   int get hashCode => 0;
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     return identical(this, other);
   }
 }
@@ -239,7 +239,7 @@ class Money implements Comparable<Money> {
   ///
   /// Compares amount of the instances
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (other is! Money) throw Exception('Money can be compared only to Money');
     if (currency != other.currency) return false;
 

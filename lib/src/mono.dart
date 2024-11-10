@@ -8,7 +8,11 @@ const String _monoPureDomain = 'https://api.monobank.ua/';
 ///
 /// Whole card number is unknown, but starting and ending numbers are
 class Mask {
-  Mask._(this.start, this.end);
+  /// Construct a card mask
+  ///
+  /// [start] - few first numbers
+  /// [end] - few last numbers
+  Mask(this.start, this.end);
 
   /// Few first numbers
   final String start;
@@ -16,16 +20,63 @@ class Mask {
   /// Few last numbers
   final String end;
 
-  factory Mask._fromString(String s) {
+  /// Parse a mask from string
+  ///
+  /// Format: `start*end`
+  factory Mask.fromString(String s) {
     final e = s.split('*');
-    return Mask._(e.first, e.last);
+    return Mask(e.first, e.last);
   }
 
   @override
   String toString() => '$start****$end';
 }
 
-/// Card class
+/// Card type class
+///
+/// This class is a container for [CardType] to also store raw data
+/// so unknown card types can be identified
+class CardTypeClass {
+  /// Construct a card type class
+  ///
+  /// [knownType] - known card type enum
+  /// [raw] - raw card type string
+  CardTypeClass(this.knownType, this.raw);
+
+  /// Card type enum
+  final CardType knownType;
+
+  /// Raw card type string
+  final String? raw;
+
+  @override
+  String toString() => raw ?? '';
+
+  /// Comparison operator
+  ///
+  /// Can compare with [CardTypeClass], [CardType] and [String]
+  @override
+  bool operator ==(Object other) {
+    if (other is CardTypeClass) {
+      return raw == other.raw;
+    }
+
+    if (other is CardType) {
+      return knownType == other;
+    }
+
+    if (other is String) {
+      return raw == other;
+    }
+
+    return false;
+  }
+
+  @override
+  int get hashCode => raw.hashCode;
+}
+
+/// Card type enum
 ///
 /// This library statically identifies card types
 /// to prevent your app from working with
@@ -66,6 +117,11 @@ enum CardType {
   /// Account for war time aid money from the Ukrainian government
   rebuilding,
 
+  /// "Зроблено в Україні" card
+  ///
+  /// Account for national cashback program
+  madeInUkraine,
+
   /// Unknown card
   other;
 
@@ -77,13 +133,14 @@ enum CardType {
 ///
 /// Contains info about account type and known card numbers
 class BankCard {
-  BankCard._(this.mask, this.type);
+  /// Construct a bank card
+  BankCard(this.mask, this.type);
 
   /// See [Mask]
   Mask mask;
 
-  /// See [CardType]
-  CardType type;
+  /// See [CardTypeClass]
+  CardTypeClass type;
 
   /// Turn string to enum
   static CardType cardTypeFromString(
@@ -115,6 +172,9 @@ class BankCard {
       case 'rebuilding':
         return CardType.rebuilding;
 
+      case 'madeInUkraine':
+        return CardType.madeInUkraine;
+
       default:
         return CardType.other;
     }
@@ -124,11 +184,35 @@ class BankCard {
   String toString() {
     return '$mask ($type)';
   }
+
+  /// Check if the card is Mastercard
+  bool isMastercard() {
+    if (mask.start.startsWith('5')) {
+      return true;
+    }
+
+    if (mask.start.length >= 4) {
+      final start = int.tryParse(mask.start.substring(0, 4));
+      if (start == null) return false;
+      return start >= 2221 && start <= 2720;
+    }
+
+    return false;
+  }
+
+  /// Check if the card is Visa
+  bool isVisa() {
+    return mask.start.startsWith('4');
+  }
 }
 
 /// Representation of clientInfo result
 class Client {
-  Client._fromJson(Map<String, dynamic> data, this.controller)
+  /// Construct a client
+  ///
+  /// [data] - data from the API
+  /// [controller] - parent API controller
+  Client.fromJson(Map<String, dynamic> data, this.controller)
       : name = data['name'] as String,
         id = SendId(data['clientId'] as String, SendIdType.client),
         _webHookUrl =
@@ -138,14 +222,14 @@ class Client {
         permissions = ClientPermission.parse(data['permissions'] as String) {
     jars.addAll(
       (data['jars'] as List<dynamic>? ?? <dynamic>[]).map(
-        (dynamic e) => Jar._fromJson(e as Map<String, dynamic>, this),
+        (dynamic e) => Jar.fromJson(e as Map<String, dynamic>, this),
       ),
     );
 
     final accountsData =
         List<Map<String, dynamic>>.from(data['accounts'] as Iterable<dynamic>);
 
-    final list = accountsData.map((e) => Account._fromJson(e, this)).toList();
+    final list = accountsData.map((e) => Account.fromJson(e, this)).toList();
 
     if (sortAccounts) {
       const uahOrder = [
@@ -155,6 +239,7 @@ class Client {
         CardType.fop,
         CardType.eAid,
         CardType.rebuilding,
+        CardType.madeInUkraine,
       ];
       const curOrder = ['UAH', 'USD', 'EUR', 'PLN'];
 
@@ -178,8 +263,8 @@ class Client {
       }
 
       uah.sort((a, b) {
-        final indA = uahOrder.indexOf(a.type);
-        final indB = uahOrder.indexOf(b.type);
+        final indA = uahOrder.indexOf(a.type.knownType);
+        final indB = uahOrder.indexOf(b.type.knownType);
 
         if (indA == -1 && indB == -1) {
           return 0;
@@ -228,6 +313,16 @@ class Client {
       accounts.addAll(list);
     }
   }
+
+  /// Convert client to JSON
+  Map<String, dynamic> toJson() => {
+        'clientId': id.id,
+        'name': name,
+        'webHookUrl': _webHookUrl?.toString(),
+        'permissions': permissions.map((e) => e.name).join(),
+        'accounts': accounts.map((e) => e.toJson()).toList(),
+        'jars': jars.map((e) => e.toJson()).toList(),
+      };
 
   /// Formal name of the client
   final String name;
@@ -394,11 +489,151 @@ enum ClientPermission {
   }
 }
 
+/// Statement source interface
+///
+/// This interface is used to provide a common interface for accounts and jars
+/// to be used when processing statement items.
+///
+/// You can access specific account or jar properties by casting the source to
+/// [Account] or [Jar] respectively.
+abstract class StatementSource {
+  /// ID of the source
+  String get id;
+
+  /// Parent client
+  Client get client;
+
+  /// Balance
+  Money get balance;
+
+  /// Cashback type
+  CashbackType get cashbackType;
+
+  /// Get statement object for current account.
+  ///
+  /// [from] - past, [to] - future
+  ///
+  /// See [Statement] for more details
+  Statement statement(DateTime from, DateTime to) {
+    return Statement(this, from, to);
+  }
+}
+
+/// Lazy statement source
+///
+/// This class is yielded in webhooks, which don't provide full account info.
+///
+/// See [LazyStatementSource.resolve] and [LazyStatementSource.resolveFromClient]
+/// to resolve the source into a proper [Account] or [Jar] object.
+///
+/// All implemented properties are stubs, except id - which contains an actual ID,
+/// and client - which throws exception if not resolved.
+///
+/// If you request statement on an unresolved source, you will get incomplete data
+/// in fields that rely on the original source, like [StatementItem.cashback],
+/// [amount] and [balance].
+class LazyStatementSource extends StatementSource {
+  /// Construct a lazy statement source
+  LazyStatementSource(this.id);
+
+  @override
+  final String id;
+
+  StatementSource? _originalSource;
+
+  /// Check if the source is resolved
+  ///
+  /// Returns `true` if the source is resolved
+  bool get isResolved => _originalSource != null;
+
+  /// Get the original source
+  ///
+  /// Returns null if the source is not resolved
+  StatementSource? get originalSource {
+    return _originalSource;
+  }
+
+  /// Get Client object used in statement
+  ///
+  /// Throws [StateError] if the original source is not resolved
+  @override
+  Client get client {
+    if (_originalSource == null) {
+      throw StateError('Original source is not resolved');
+    }
+
+    return _originalSource!.client;
+  }
+
+  @override
+  Money get balance => _originalSource?.balance ?? Money(0, Currency.dummy);
+
+  @override
+  CashbackType get cashbackType =>
+      _originalSource?.cashbackType ?? CashbackType.unknown;
+
+  @override
+  @Deprecated('Calling this method on unresolved source will return incomplete'
+      ' data. Resolve this source into a proper Account or Jar object with'
+      ' resolveFromClient or resolve method.')
+  Statement statement(DateTime from, DateTime to) {
+    return super.statement(from, to);
+  }
+
+  /// Resolve the source
+  ///
+  /// [api] - MonoAPI instance to resolve the source
+  ///
+  /// Returns the resolved source. Current instance becomes a proxy
+  /// to the resolved source.
+  ///
+  /// It may resolve to either [Account] or [Jar] object, or null if the source
+  /// is not found. You can cast the result to [Account] or [Jar] to access
+  /// specific properties.
+  ///
+  /// Alternatively, you can use [resolveFromClient] to set the client instance directly
+  /// if you already have it.
+  Future<StatementSource?> resolve(PersonalMethods api) async {
+    final e = await api.clientInfo();
+
+    return await resolveFromClient(e);
+  }
+
+  /// Set client instance directly
+  ///
+  /// Useful when you already have the client instance
+  ///
+  /// It may resolve to either [Account] or [Jar] object, or null if the source
+  /// is not found. You can cast the result to [Account] or [Jar] to access
+  /// specific properties.
+  ///
+  /// Alternatively, you can use [resolve] to resolve the Client from MonoAPI
+  /// instance
+  Future<StatementSource?> resolveFromClient(Client client) async {
+    for (final a in client.accounts) {
+      if (a.id == id) {
+        _originalSource = a;
+        return a;
+      }
+    }
+
+    for (final j in client.jars) {
+      if (j.id == id) {
+        _originalSource = j;
+        return j;
+      }
+    }
+
+    return null;
+  }
+}
+
 /// The jar
 ///
 /// A jar is a personal account that can be used to save or collect money
-class Jar {
+class Jar extends StatementSource {
   /// ID of the jar
+  @override
   final String id;
 
   /// Send ID of the jar
@@ -413,13 +648,18 @@ class Jar {
   final String description;
 
   /// Balance of the jar
+  @override
   final Money balance;
 
   /// Goal of the jar
   final Money? goal;
 
   /// Parent account
+  @override
   final Client client;
+
+  @override
+  CashbackType get cashbackType => CashbackType.none;
 
   /// Check if the jar is full
   ///
@@ -433,7 +673,11 @@ class Jar {
     return '🍯 $title: $balance${goal == null ? '' : ' / $goal'}';
   }
 
-  Jar._fromJson(Map<String, dynamic> data, this.client)
+  /// Construct a jar
+  ///
+  /// [data] - data from the API
+  /// [client] - parent API client
+  Jar.fromJson(Map<String, dynamic> data, this.client)
       : id = data['id'] as String,
         sendId = SendId(
           (data['sendId'] as String? ?? '').replaceFirst('jar/', ''),
@@ -451,6 +695,17 @@ class Jar {
                 data['goal'] as int,
                 Currency.number(data['currencyCode'] as int),
               );
+
+  /// Convert jar to JSON
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'sendId': sendId.id,
+        'title': title,
+        'description': description,
+        'currencyCode': balance.currency.code,
+        'balance': balance.amount,
+        'goal': goal?.amount,
+      };
 }
 
 /// Cashback type
@@ -479,11 +734,29 @@ enum CashbackType {
       return unknown;
     }
   }
+
+  @override
+  String toString() {
+    switch (this) {
+      case none:
+        return 'None';
+      case uah:
+        return 'UAH';
+      case miles:
+        return 'Miles';
+      case unknown:
+        return 'Unknown';
+    }
+  }
 }
 
 /// Representation of cashback
 class Cashback {
-  Cashback._(this.amount, this.type);
+  /// Construct cashback object
+  ///
+  /// [amount] - amount of cashback
+  /// [type] - type of cashback
+  Cashback(this.amount, this.type);
 
   /// Amount of cashback
   final double amount;
@@ -498,19 +771,43 @@ class Cashback {
 
   @override
   String toString() => '🎁 $amount';
+
+  /// Parse cashback from type and amount
+  ///
+  /// [amount] - amount of cashback
+  /// [type] - type of cashback
+  factory Cashback.fromType(int amount, CashbackType type) {
+    switch (type) {
+      case CashbackType.uah:
+        return MoneyCashback(amount, Currency.number(980));
+      case CashbackType.miles:
+        return MilesCashback(amount);
+      case CashbackType.none:
+        return NoCashback();
+      default:
+        return Cashback(amount.toDouble(), CashbackType.unknown);
+    }
+  }
 }
 
 /// Account doesn't provide cashback
 class NoCashback extends Cashback {
-  NoCashback._() : super._(0, CashbackType.none);
+  /// Construct a NoCashback object
+  ///
+  /// This object is used when the account doesn't provide cashback
+  NoCashback() : super(0, CashbackType.none);
   @override
   String toString() => '';
 }
 
 /// Account provides money-backed cashback
 class MoneyCashback extends Cashback {
-  MoneyCashback._(int amount, this.currency)
-      : super._(amount.toDouble(), CashbackType.uah);
+  /// Construct a MoneyCashback object
+  ///
+  /// [amount] - amount of cashback
+  /// [currency] - currency of cashback
+  MoneyCashback(int amount, this.currency)
+      : super(amount.toDouble(), CashbackType.uah);
 
   /// The currency of cashback
   Currency currency;
@@ -524,29 +821,25 @@ class MoneyCashback extends Cashback {
 
 /// Account provides miles cashback
 class MilesCashback extends Cashback {
-  MilesCashback._(int amount) : super._(amount / 100, CashbackType.miles);
+  /// Construct a MilesCashback object
+  ///
+  /// The API returns miles * 100, so the amount is divided by 100
+  MilesCashback(int amount) : super(amount / 100, CashbackType.miles);
 
   @override
   String toString() => '✈ ${amount}mi';
 }
 
-Cashback _cashback(int amount, CashbackType type) {
-  switch (type) {
-    case CashbackType.uah:
-      return MoneyCashback._(amount, Currency.number(980));
-    case CashbackType.miles:
-      return MilesCashback._(amount);
-    case CashbackType.none:
-      return NoCashback._();
-    default:
-      return Cashback._(amount.toDouble(), CashbackType.unknown);
-  }
-}
-
 /// Single item from statement
 class StatementItem {
-  StatementItem._fromJson(Map<String, dynamic> data, this.account)
-      : id = data['id'] as String,
+  /// Construct a statement item
+  ///
+  /// [data] - data from the API
+  /// [account] - parent account
+  StatementItem.fromJson(Map<String, dynamic> data, this.account)
+      : isServiceMessage = false,
+        serviceMessageCode = null,
+        id = data['id'] as String,
         time =
             DateTime.fromMillisecondsSinceEpoch((data['time'] as int) * 1000),
         description = data['description'] as String? ?? '',
@@ -567,8 +860,10 @@ class StatementItem {
           data['commissionRate'] as int,
           Currency.number(data['currencyCode'] as int),
         ),
-        cashback =
-            _cashback(data['cashbackAmount'] as int, account.cashbackType),
+        cashback = Cashback.fromType(
+          data['cashbackAmount'] as int,
+          account.cashbackType,
+        ),
         balance = Money(
           data['balance'] as int,
           account.balance.currency,
@@ -581,8 +876,58 @@ class StatementItem {
         counterIban = data['counterIban'] as String?,
         counterName = data['counterName'] as String?;
 
+  /// Construct a service message
+  ///
+  /// Service messages are injected into the statement stream
+  /// by the library to inform about possible issues with the data
+  ///
+  /// [serviceMessageCode] - service message code
+  /// [description] - description of the message
+  /// [account] - parent account
+  StatementItem.serviceMessage(
+      this.serviceMessageCode, this.description, this.account,
+      {DateTime? time})
+      : isServiceMessage = true,
+        id = '',
+        time = time ?? DateTime.now(),
+        mcc = MCC(0),
+        originalMcc = MCC(0),
+        amount = Money(0, Currency.dummy),
+        operationAmount = Money(0, Currency.dummy),
+        commissionRate = Money(0, Currency.dummy),
+        cashback = NoCashback(),
+        balance = Money(0, Currency.dummy),
+        comment = '',
+        hold = false,
+        receiptId = null,
+        invoiceId = null,
+        counterEdrpou = null,
+        counterIban = null,
+        counterName = null;
+
+  /// Construct a statement item to json
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'time': time.millisecondsSinceEpoch ~/ 1000,
+        'description': description,
+        'mcc': mcc.code,
+        'originalMcc': originalMcc.code,
+        'hold': hold,
+        'amount': amount.amount,
+        'operationAmount': operationAmount.amount,
+        'commissionRate': commissionRate.amount,
+        'cashbackAmount': cashback.amount,
+        'balance': balance.amount,
+        'comment': comment,
+        'receiptId': receiptId,
+        'invoiceId': invoiceId,
+        'counterEdrpou': counterEdrpou,
+        'counterIban': counterIban,
+        'counterName': counterName,
+      };
+
   /// Parent account
-  final Account account;
+  final StatementSource account;
 
   /// Operation ID
   final String id;
@@ -635,6 +980,13 @@ class StatementItem {
   /// Counteragent name, is available only for accounts with `fop` type
   final String? counterName;
 
+  /// True if the transaction is a service message and
+  /// not a real transaction
+  final bool isServiceMessage;
+
+  /// Service message numeric code
+  final StatementItemServiceMessageCode? serviceMessageCode;
+
   /// Returns true if operation is outgoing
   bool get isOut => amount.isNegative;
 
@@ -650,20 +1002,41 @@ class StatementItem {
 
 /// Statement stream holder
 ///
-/// Use [list] method to access statement
+/// Use [list] method to access statement.
+///
+/// Timestamps are inclusive.
 class Statement {
-  Statement._(this.account, this.from, this.to);
+  /// Construct a statement
+  ///
+  /// [account] - account to get statement from
+  /// [from] - start from
+  /// [to] - end on
+  ///
+  /// Timestamps are inclusive
+  Statement(this.account, this.from, this.to);
 
   /// Source account
-  final Account account;
+  final StatementSource account;
 
-  /// Start from
+  /// Start from, past
   final DateTime from;
 
-  /// End on
+  /// End on, future
   final DateTime to;
 
-  static const Duration _maxRange = Duration(days: 31);
+  /// Maximum range for a single request
+  ///
+  /// This is a limit of the Monobank API, this value is used to
+  /// determine where to split the statement request if the range
+  /// is bigger than this value
+  static Duration maxRequestRange = Duration(days: 31, hours: 1);
+
+  /// Maximum possible items in a response
+  ///
+  /// This is a limit of the Monobank API, this value is used to
+  /// determine if the library should start querying the statement
+  /// in smaller parts to guarantee the correct order of transactions
+  static int maxPossibleItems = 500;
 
   /// Begins stream of statement
   ///
@@ -671,73 +1044,185 @@ class Statement {
   /// range is bigger than the one allowed by API
   ///
   /// In such case statement is being requested by parts
+  ///
+  /// **NOTE:** Monobank Statement API is designed for reverse chronological order
+  /// first, if you request the statement in the chronological order, in cases
+  /// when there will be more than [maxPossibleItems] transactions within a time
+  /// frame the library will start buffering the transactions until the library
+  /// can guarantee that the transactions are in the correct order.
   Stream<StatementItem> list({
-    /// Doesn't stop the stream if an error happens
-    ///
-    /// Some items can be skipped without any warnings
-    bool ignoreErrors = false,
-
     /// Reverse stream
     ///
     /// `false`: from older to newer
     /// `true`: from newer to older
-    bool reverse = false,
+    bool isReverseChronological = true,
+
+    /// Include service messages
+    ///
+    /// The library will include service messages in the stream
+    /// to inform about possible missing data and other issues.
+    ///
+    /// See [StatementItem.isServiceMessage] and
+    /// [StatementItem.serviceMessageCode]
+    ///
+    /// `false`: exclude service messages
+    /// `true`: include service messages
+    bool includeServiceMessages = true,
+
+    /// Abort controller
+    ///
+    /// Allows to cancel the request in the middle of the process
+    AbortController? abortController,
   }) async* {
-    var lFrom = from, lTo = to;
+    if (isReverseChronological) {
+      DateTime localFrom = from;
+      DateTime localTo = to;
+      String? lastId;
 
-    while (reverse ? lTo.isAfter(from) : lFrom.isBefore(to)) {
-      if (reverse) {
-        lFrom = lTo.subtract(_maxRange);
-        if (lFrom.isBefore(from)) lFrom = from;
-      } else {
-        lTo = lFrom.add(_maxRange);
-        if (lTo.isAfter(to)) lTo = to;
+      while (abortController?.isCancelled != true) {
+        localFrom = localTo.subtract(maxRequestRange);
+        if (localFrom.isBefore(from)) localFrom = from;
+
+        final result = await _requestRange(localFrom, localTo, abortController);
+
+        final body =
+            List<Map<String, dynamic>>.from(result.body as Iterable<dynamic>);
+        List<StatementItem> statementFragment =
+            body.map((e) => StatementItem.fromJson(e, account)).toList();
+
+        final lastItem =
+            statementFragment.isEmpty ? null : statementFragment.last;
+
+        // When making repeat requests with precision to the second to
+        // fit within the maxPossibleItems limit, server might return
+        // the same transactions again, so we need to skip them
+        if (lastId != null) {
+          final repeatIndex =
+              statementFragment.indexWhere((e) => e.id == lastId);
+
+          if (repeatIndex != -1) {
+            statementFragment = statementFragment.sublist(repeatIndex + 1);
+          }
+        }
+
+        for (final e in statementFragment) {
+          yield e;
+          lastId = e.id;
+        }
+
+        final isDeadEnd = body.length >= maxPossibleItems &&
+            ((lastItem != null && lastItem.time == localTo) ||
+                localFrom == localTo);
+
+        if (includeServiceMessages && isDeadEnd) {
+          yield StatementItem.serviceMessage(
+            StatementItemServiceMessageCode.possibleMissingData,
+            'Statement might contain missing data because request for '
+            'the given second returns more than $maxPossibleItems items',
+            account,
+            time: localFrom,
+          );
+        }
+
+        if (body.length >= maxPossibleItems) {
+          if (!isDeadEnd && lastItem != null) {
+            localTo = lastItem.time;
+          } else {
+            localTo = localTo.subtract(Duration(seconds: 1));
+
+            if (localTo.isBefore(from) || localTo == from) {
+              break;
+            }
+          }
+        } else if (localFrom == from) {
+          // We reached the target from value and returned items number
+          // is less than maxPossibleItems, so we can stop
+          break;
+        } else {
+          // We can continue fetching data
+          localTo = localFrom.subtract(Duration(seconds: 1));
+        }
       }
+    } else {
+      DateTime localFrom = from;
+      DateTime localTo = to;
 
-      final f = (lFrom.millisecondsSinceEpoch / 1000).floor();
-      final t = (lTo.millisecondsSinceEpoch / 1000).floor();
+      while (abortController?.isCancelled != true) {
+        localTo = localFrom.add(maxRequestRange);
+        if (localTo.isAfter(to)) localTo = to;
 
-      APIResponse data;
-      List<Map<String, dynamic>> body;
+        final buffer = <StatementItem>[];
+        final subStatement = account.statement(localFrom, localTo);
 
-      try {
-        data = await account.client.controller.call(APIRequest(
-          'personal/statement/${account.id}/$f/$t',
-          methodId: 'personal/statement',
-          useAuth: true,
-        ));
+        await for (final item in subStatement.list(
+          isReverseChronological: true,
+          includeServiceMessages: includeServiceMessages,
+          abortController: abortController,
+        )) {
+          buffer.add(item);
+        }
 
-        body = List<Map<String, dynamic>>.from(data.body as Iterable<dynamic>);
-      } catch (e) {
-        if (!ignoreErrors) rethrow;
-        body = [];
-      }
+        // Yield buffered items in the chronological order
+        for (final e in buffer.reversed) {
+          yield e;
+        }
 
-      final i = (reverse ? body : body.reversed)
-          .map((e) => StatementItem._fromJson(e, account));
+        // If we reached the target to value, we can stop
+        if (localTo == to) {
+          break;
+        }
 
-      for (final e in i) {
-        yield e;
-      }
-
-      if (reverse) {
-        lTo = lFrom.subtract(Duration(seconds: 1));
-      } else {
-        lFrom = lTo.add(Duration(seconds: 1));
+        // Proceed to the next range in the chronological order
+        localFrom = localTo.add(Duration(seconds: 1));
       }
     }
   }
+
+  Future<APIResponse> _requestRange(
+    DateTime from,
+    DateTime to,
+    AbortController? abortController,
+  ) {
+    final f = from.millisecondsSinceEpoch ~/ 1000;
+    final t = to.millisecondsSinceEpoch ~/ 1000;
+
+    return account.client.controller.call(APIRequest(
+      'personal/statement/${account.id}/$f/$t',
+      methodId: 'personal/statement',
+      useAuth: true,
+      abortController: abortController,
+    ));
+  }
+}
+
+/// Statement Item Service Message Code
+///
+/// Codes for service messages in statement items
+enum StatementItemServiceMessageCode {
+  /// Not a service message
+  none,
+
+  /// Unknown service message
+  unknown,
+
+  /// Statement might contain missing data because request for the given
+  /// second returns more than [Statement.maxPossibleItems] items
+  possibleMissingData,
 }
 
 /// Represents monobank account (balance)
-class Account {
+class Account extends StatementSource {
   /// Extracts credit limit from account balance for [balance] getter
   /// to show true account balance
   ///
   /// You can also use [pureBalance] instead
   static bool hideCreditLimit = false;
 
-  Account._fromJson(Map<String, dynamic> data, this.client)
+  /// Construct an account
+  ///
+  /// [data] - data from the API
+  /// [client] - parent client
+  Account.fromJson(Map<String, dynamic> data, this.client)
       : id = data['id'] as String,
         accountBalance = Money(data['balance'] as int,
             Currency.number(data['currencyCode'] as int)),
@@ -748,17 +1233,38 @@ class Account {
         sendId = data['sendId'] as String != ''
             ? SendId(data['sendId'] as String, SendIdType.client)
             : null,
-        type = BankCard.cardTypeFromString(data['type'] as String),
+        type = CardTypeClass(
+          BankCard.cardTypeFromString(data['type'] as String),
+          data['type'] as String,
+        ),
         cards = List<String>.from(data['maskedPan'] as Iterable<dynamic>)
-            .map((e) => BankCard._(
-                  Mask._fromString(e),
-                  BankCard.cardTypeFromString(data['type'] as String),
+            .map((e) => BankCard(
+                  Mask.fromString(e),
+                  CardTypeClass(
+                    BankCard.cardTypeFromString(data['type'] as String),
+                    data['type'] as String,
+                  ),
                 ))
             .toList();
+
+  /// Convert account to JSON
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'sendId': sendId?.id ?? '',
+        'balance': accountBalance.amount,
+        'creditLimit': creditLimit.amount,
+        'type': type.raw,
+        'currencyCode': accountBalance.currency.code,
+        'cashbackType': cashbackType.toString(),
+        'maskedPan':
+            cards.map((e) => '${e.mask.start}****${e.mask.end}').toList(),
+        'iban': iban,
+      };
 
   /// Account ID
   ///
   /// Actually can be used for getting statement only
+  @override
   final String id;
 
   /// Account Send ID
@@ -767,6 +1273,7 @@ class Account {
   final SendId? sendId;
 
   /// Parent
+  @override
   final Client client;
 
   /// Reported account balance (including credit limit)
@@ -776,6 +1283,7 @@ class Account {
   final Money creditLimit;
 
   /// Cashback type
+  @override
   final CashbackType cashbackType;
 
   /// IBAN
@@ -786,8 +1294,8 @@ class Account {
 
   /// Account type
   ///
-  /// See [CardType]
-  final CardType type;
+  /// See [CardTypeClass]
+  final CardTypeClass type;
 
   /// Account balance without credit funds
   Money get pureBalance => (accountBalance - creditLimit);
@@ -796,6 +1304,7 @@ class Account {
   ///
   /// Returns accountBalance or pureBalance
   /// depending on [hideCreditLimit] flag
+  @override
   Money get balance => (hideCreditLimit ? pureBalance : accountBalance);
 
   /// Returns true when the account is in actual overdraft
@@ -808,12 +1317,6 @@ class Account {
   /// is in overdraft
   bool get isCreditUsed => accountBalance < creditLimit;
 
-  /// Get statement object for current account
-  ///
-  /// See [Statement]
-  Statement statement(DateTime from, DateTime to) =>
-      Statement._(this, from, to);
-
   @override
   String toString() {
     return '$id: $balance';
@@ -823,28 +1326,31 @@ class Account {
 /// Interface for webhook event types
 ///
 /// See the only available type [StatementItemWebhookEvent]
-class WebhookEvent {
+abstract class WebhookEvent {
   /// Parse an event from JSON
   ///
   /// Throws [WebhookEventParseException] if parsing fails
   factory WebhookEvent.fromJson(Map<String, dynamic> data) {
     switch (data['type'] as String) {
       case 'StatementItem':
-        return StatementItemWebhookEvent._fromJson(data);
+        return StatementItemWebhookEvent.fromJson(data);
       default:
         throw Exception('Unknown webhook event type: ${data['type']}');
     }
   }
+
+  /// Convert event to JSON
+  Map<String, dynamic> toJson();
 }
 
 /// Transaction webhook event
 class StatementItemWebhookEvent implements WebhookEvent {
   /// Account referenced in the webhook event.
   ///
-  /// Despite the fact [LazyAccount] implements [Account], most of getters are
-  /// stubs. See [LazyAccount] for details. To get actual account data, use
-  /// [LazyAccount.resolve].
-  final LazyAccount account;
+  /// Despite the fact [LazyStatementSource] implements [StatementSource], most of
+  /// getters are stubs. See [LazyStatementSource] for details. To get actual account
+  /// data, use [LazyStatementSource.resolve].
+  final LazyStatementSource account;
 
   /// Statement item referenced in the webhook event.
   ///
@@ -853,105 +1359,32 @@ class StatementItemWebhookEvent implements WebhookEvent {
   /// object in API and is usually delivered from the [Account] object by
   /// [StatementItem]'s internal logic.
   ///
-  /// If you want to access proper data, call [LazyAccount.resolve] on
+  /// If you want to access proper data, call [LazyStatementSource.resolve] on
   /// [account] and then use [LazyStatementItem.regenerate].
   late final LazyStatementItem item;
 
-  StatementItemWebhookEvent._fromJson(Map<String, dynamic> data)
-      : account = LazyAccount(
+  /// Construct a webhook event
+  ///
+  /// [data] - data from the API
+  StatementItemWebhookEvent.fromJson(Map<String, dynamic> data)
+      : account = LazyStatementSource(
           (data['data'] as Map<String, dynamic>)['account'] as String,
         ) {
-    item = LazyStatementItem._fromJson(
+    item = LazyStatementItem.fromJson(
       (data['data'] as Map<String, dynamic>)['statementItem']
           as Map<String, dynamic>,
       account,
     );
   }
-}
-
-/// Represents an unresolved account
-///
-/// Use [resolve] method to get resolved account
-///
-/// All implemented properties are stubs, except [id] - which contains an actual
-/// ID, and [client] - which throws exception if not resolved.
-class LazyAccount implements Account {
-  @override
-  final String id;
-
-  /// Create an unresolved account
-  ///
-  /// You can use this constructor to create unresolved account.
-  LazyAccount(this.id);
-
-  /// Resolve account
-  ///
-  /// Returns resolved account or null if account is not found. Current instance
-  /// turns into a proxy for the resolved instance.
-  ///
-  /// You need to provide [client] with [PersonalMethods] mixin support
-  /// (e.g. [MonoAPI] to resolve account.
-  Future<Account?> resolve(PersonalMethods client) async {
-    final e = await client.clientInfo();
-
-    for (final a in e.accounts) {
-      if (a.id == id) {
-        originalAccount = a;
-        return a;
-      }
-    }
-
-    return null;
-  }
-
-  /// Resolved instance of account
-  ///
-  /// See [resolve]
-  Account? originalAccount;
 
   @override
-  Money get accountBalance =>
-      originalAccount?.accountBalance ?? Money(0, Currency.dummy);
-
-  @override
-  Money get balance => originalAccount?.balance ?? Money(0, Currency.dummy);
-
-  @override
-  List<BankCard> get cards => originalAccount?.cards ?? [];
-
-  @override
-  CashbackType get cashbackType =>
-      originalAccount?.cashbackType ?? CashbackType.unknown;
-
-  @override
-  Client get client => originalAccount?.client ?? (throw UnimplementedError());
-
-  @override
-  Money get creditLimit =>
-      originalAccount?.creditLimit ?? Money(0, Currency.dummy);
-
-  @override
-  String get iban => originalAccount?.iban ?? '';
-
-  @override
-  bool get isCreditUsed => originalAccount?.isCreditUsed ?? false;
-
-  @override
-  bool get isOverdraft => originalAccount?.isOverdraft ?? false;
-
-  @override
-  Money get pureBalance =>
-      originalAccount?.pureBalance ?? Money(0, Currency.dummy);
-
-  @override
-  SendId? get sendId => originalAccount?.sendId;
-
-  @override
-  Statement statement(DateTime from, DateTime to) =>
-      originalAccount?.statement(from, to) ?? Statement._(this, from, to);
-
-  @override
-  CardType get type => originalAccount?.type ?? CardType.other;
+  Map<String, dynamic> toJson() => {
+        'type': 'StatementItem',
+        'data': {
+          'account': account.id,
+          'statementItem': item.toJson(),
+        },
+      };
 }
 
 /// Represents a lazy statement item
@@ -960,16 +1393,46 @@ class LazyAccount implements Account {
 /// stores the raw data used to generate the instance, so you can regenerate
 /// it any time if the [account] state changes.
 ///
-/// This class is mainly designed to work in pair with [LazyAccount] class.
+/// This class is mainly designed to work in pair with [LazyStatementSource] class.
 class LazyStatementItem extends StatementItem {
   final Map<String, dynamic> _data;
 
   /// Regenerate the instance from raw data. This method is called when
-  /// the [account] state changes. For example. when you call [LazyAccount.resolve].
-  StatementItem regenerate() => StatementItem._fromJson(_data, account);
+  /// the [account] state changes. For example. when you call
+  /// [LazyStatementSource.resolve].
+  StatementItem regenerate() => StatementItem.fromJson(_data, account);
 
-  LazyStatementItem._fromJson(this._data, Account account)
-      : super._fromJson(_data, account);
+  /// Construct a lazy statement item
+  ///
+  /// [data] - raw data from the API
+  /// [account] - parent account
+  LazyStatementItem.fromJson(this._data, StatementSource account)
+      : super.fromJson(_data, account);
+
+  @override
+  @Deprecated('This getter may return dummy currency if the account is not'
+      ' resolved and operationAmount is not equal to amount, because account\'s'
+      ' currency is unknown')
+  Money get amount {
+    return super.amount;
+  }
+
+  @override
+  @Deprecated('This getter will return dummy currency if the account is not'
+      ' resolved, because account\'s currency is unknown')
+  Money get balance {
+    return super.balance;
+  }
+
+  @override
+  @Deprecated('This getter will always return Unknown cashback type if the'
+      ' account is not resolved')
+  Cashback get cashback {
+    return super.cashback;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => _data;
 }
 
 /// Enable personal/* methods
@@ -983,7 +1446,7 @@ mixin PersonalMethods on API {
       methodId: 'personal/client-info',
       useAuth: true,
     ));
-    return Client._fromJson(data.body as Map<String, dynamic>, this);
+    return Client.fromJson(data.body as Map<String, dynamic>, this);
   }
 }
 
