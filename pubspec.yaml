@@ -4,9 +4,8 @@ description: >
 
     Supports getting currencies and statement info, includes currency and MCC datasets
 
-version: 3.0.0
+version: 3.0.1
 repository: https://github.com/Sominemo/monobank_api
-issue_tracker: https://github.com/Sominemo/monobank_api/issues
 
 environment:
     sdk: ">=2.17.0 <4.0.0"
@@ -15,5 +14,5 @@ dependencies:
     http: ^1.1.0
 
 dev_dependencies:
-    lints: ^4.0.0
+    lints: ">=4.0.0 <6.0.0"
     test: ^1.16.5

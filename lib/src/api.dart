@@ -16,7 +16,7 @@ enum APIErrorType {
 
 /// Error that's being thrown by [API] in case of an expected error
 ///
-/// Can be thrown in case of incorrect settings, runtime errors or API response codes which differ from 200
+/// Can be thrown in case of incorrect settings, runtime errors or API response codes that are not successful
 /// Instances of this class contain getters to check for some known error types
 class APIError {
   /// Error code
@@ -161,7 +161,7 @@ class APIRequest {
 
   /// Request method
   ///
-  /// Subpath of API's domain. Leading slash `/` is not needed
+  /// Subpath of API's domain. Avoid the leading slash `/`
   /// ```
   /// String requestUrl = API.domain + APIRequest.method
   /// ```
@@ -182,11 +182,12 @@ class APIRequest {
   /// API Request Flags
   ///
   /// See [APIFlags]
-  final int settings;
+  int settings;
 
   /// Attach credentials to the request
   ///
-  /// Will throw [APIError.tokenError()] if set to `true` while token is absent
+  /// Default auth attacher will throw [APIError.tokenError()]
+  /// if set to `true` while token is absent
   final bool useAuth;
 
   /// JSON body to be sent
@@ -227,15 +228,31 @@ class APIRequest {
   /// pending result).
   ///
   /// If you use the same [APIRequest] instance with different
-  /// [API] instances, behavior is undefined
-  factory APIRequest.clone(APIRequest request) => APIRequest(
-        request.method,
-        methodId: request.methodId,
-        data: request._originalData,
-        headers: request._originalHeaders,
-        httpMethod: request.httpMethod,
-        settings: request.settings,
-        useAuth: request.useAuth,
+  /// [API] instances, behavior is undefined.
+  ///
+  /// Optional arguments are being used to override the original
+  /// request properties. If not specified, the original properties
+  /// will be used.
+  factory APIRequest.clone(
+    APIRequest request, {
+    String? method,
+    String? methodId,
+    Map<String, String>? data,
+    Map<String, String>? headers,
+    APIHttpMethod? httpMethod,
+    int? settings,
+    bool? useAuth,
+    AbortController? abortController,
+  }) =>
+      APIRequest(
+        method ?? request.method,
+        methodId: methodId ?? request.methodId,
+        data: data ?? request._originalData,
+        headers: headers ?? request._originalHeaders,
+        httpMethod: httpMethod ?? request.httpMethod,
+        settings: settings ?? request.settings,
+        useAuth: useAuth ?? request.useAuth,
+        abortController: abortController ?? request.abortController,
       );
 }
 
@@ -435,10 +452,6 @@ class API {
   Future<APIResponse> call(APIRequest request) {
     if (!request._isProcessingNeeded) return request.result;
 
-    if (request.useAuth && token == null) {
-      throw APIError.tokenError();
-    }
-
     _sendToCart(request);
 
     return request.result;
@@ -448,14 +461,20 @@ class API {
     if (((request.settings & APIFlags.skip > 0) ||
             (request.settings & APIFlags.skipGlobal > 0)) &&
         request.settings & APIFlags.waiting == 0) {
-      request._completer.completeError(APIError(2));
+      request._completer.completeError(APIError(
+        2,
+        body: "You can't skip the request without waiting",
+      ));
       return;
     }
 
     if (request.settings & APIFlags.skipGlobal > 0 &&
         request.settings & APIFlags.skip > 0) {
       if (request.settings & APIFlags.waiting > 0) {
-        request._completer.completeError(APIError(2));
+        request._completer.completeError(APIError(
+          2,
+          body: "You can't global-skip the request without waiting",
+        ));
         return;
       }
       _sendRequest(request);
@@ -469,7 +488,10 @@ class API {
     }
 
     if (!isRequestImmediate(request.methodId)) {
-      request._completer.completeError(APIError(2));
+      request._completer.completeError(APIError(
+        2,
+        body: 'Request is not immediate and waiting flag is not set',
+      ));
       return;
     }
 
@@ -506,7 +528,9 @@ class API {
         }
 
         if (globalWait != Duration.zero &&
-            (request.settings & APIFlags.skipGlobal == 0)) continue;
+            (request.settings & APIFlags.skipGlobal == 0)) {
+          continue;
+        }
 
         _sendRequest(request);
         _cart.remove(request);
@@ -545,7 +569,7 @@ class API {
       request._isProcessingNeeded = false;
 
       if (request.abortController.isCancelled) {
-        throw APIError(3);
+        throw APIError(3, body: 'Request was cancelled');
       }
 
       final inLine = (request.settings & APIFlags.skip == 0) &&
@@ -572,10 +596,12 @@ class API {
       } else if (request.httpMethod == APIHttpMethod.GET) {
         response = await http.get(requestUrl, headers: request.headers);
       } else {
-        throw APIError(1);
+        throw APIError(1, body: 'Unknown HTTP Method');
       }
 
-      if (response.statusCode != 200) {
+      const successCodes = [200, 201, 202, 204];
+
+      if (!successCodes.contains(response.statusCode)) {
         throw APIError(response.statusCode,
             type: APIErrorType.server, body: response.body.toString());
       }
@@ -615,7 +641,8 @@ class API {
   /// Attaches credentials to given request
   void authAttacher(APIRequest request) {
     final localToken = token;
-    if (localToken != null) request.headers['X-Token'] = localToken;
+    if (localToken == null) throw APIError.tokenError();
+    request.headers['X-Token'] = localToken;
   }
 
   /// Preprocesses given request

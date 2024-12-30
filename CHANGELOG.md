@@ -1,3 +1,11 @@
+## 3.0.1
+
+-   Minor documentation and style fixes
+-   APIRequest.settings is not final anymore
+-   Added arguments to APIRequest.clone to allow for changing fields
+-   Added message descriptions to local errors
+-   Moved token presence check to authAttacher so it can be overridden
+
 ## 3.0.0
 
 ### Breaking Changes
